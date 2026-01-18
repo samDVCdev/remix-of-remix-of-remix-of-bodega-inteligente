@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarChart3, Download, FileText } from "lucide-react";
+import { BarChart3, Download, FileText, FileSpreadsheet } from "lucide-react";
 import { useMovements } from "@/hooks/useMovements";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { exportMovementsToExcel, exportMovementsToPDF } from "@/lib/exportUtils";
 
 export default function ReportsPage() {
   const [startDate, setStartDate] = useState(
@@ -49,48 +50,54 @@ export default function ReportsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-display font-bold text-foreground flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-display font-bold text-foreground flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
-                <BarChart3 className="w-6 h-6 text-primary" />
+                <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
               </div>
               Reportes
             </h1>
-            <p className="text-muted-foreground mt-1">Genera reportes de movimientos por período</p>
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base">Genera reportes de movimientos</p>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => filteredMovements && exportMovementsToExcel(filteredMovements, startDate, endDate)}
+              disabled={!filteredMovements?.length}
+              className="gap-1"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span className="hidden sm:inline">Excel</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => filteredMovements && exportMovementsToPDF(filteredMovements, startDate, endDate)}
+              disabled={!filteredMovements?.length}
+              className="gap-1"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">PDF</span>
+            </Button>
           </div>
         </div>
 
         {/* Filters */}
         <div className="stat-card">
           <h3 className="font-display font-semibold mb-4">Filtros</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="text-sm font-medium text-muted-foreground mb-1.5 block">
-                Fecha Inicio
-              </label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
+              <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Fecha Inicio</label>
+              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
             </div>
             <div>
-              <label className="text-sm font-medium text-muted-foreground mb-1.5 block">
-                Fecha Fin
-              </label>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
+              <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Fecha Fin</label>
+              <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
             </div>
             <div>
-              <label className="text-sm font-medium text-muted-foreground mb-1.5 block">
-                Tipo de Movimiento
-              </label>
+              <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Tipo</label>
               <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-popover">
                   <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="entrada">Entradas</SelectItem>
@@ -105,25 +112,15 @@ export default function ReportsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="stat-card bg-success/5 border-success/20">
             <p className="text-sm font-medium text-muted-foreground">Total Ventas</p>
-            <p className="text-2xl font-display font-bold text-success">
-              ${totalSalidas.toFixed(2)}
-            </p>
+            <p className="text-xl sm:text-2xl font-display font-bold text-success">${totalSalidas.toFixed(2)}</p>
           </div>
           <div className="stat-card bg-warning/5 border-warning/20">
             <p className="text-sm font-medium text-muted-foreground">Total Compras</p>
-            <p className="text-2xl font-display font-bold text-warning">
-              ${totalEntradas.toFixed(2)}
-            </p>
+            <p className="text-xl sm:text-2xl font-display font-bold text-warning">${totalEntradas.toFixed(2)}</p>
           </div>
-          <div className={cn(
-            "stat-card",
-            balance >= 0 ? "bg-success/5 border-success/20" : "bg-destructive/5 border-destructive/20"
-          )}>
+          <div className={cn("stat-card", balance >= 0 ? "bg-success/5 border-success/20" : "bg-destructive/5 border-destructive/20")}>
             <p className="text-sm font-medium text-muted-foreground">Balance</p>
-            <p className={cn(
-              "text-2xl font-display font-bold",
-              balance >= 0 ? "text-success" : "text-destructive"
-            )}>
+            <p className={cn("text-xl sm:text-2xl font-display font-bold", balance >= 0 ? "text-success" : "text-destructive")}>
               {balance >= 0 ? "+" : ""}{balance.toFixed(2)} USD
             </p>
           </div>
@@ -131,73 +128,50 @@ export default function ReportsPage() {
 
         {/* Movements Table */}
         <div className="stat-card p-0 overflow-hidden">
-          <div className="p-4 border-b border-border flex items-center justify-between">
-            <h3 className="font-display font-semibold">
-              Movimientos ({filteredMovements?.length || 0})
-            </h3>
+          <div className="p-4 border-b border-border">
+            <h3 className="font-display font-semibold">Movimientos ({filteredMovements?.length || 0})</h3>
           </div>
 
           {isLoading ? (
-            <div className="p-8 text-center text-muted-foreground">
-              Cargando movimientos...
-            </div>
+            <div className="p-8 text-center text-muted-foreground">Cargando...</div>
           ) : filteredMovements?.length === 0 ? (
             <div className="p-12 text-center">
               <FileText className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-              <p className="text-muted-foreground">
-                No hay movimientos en el período seleccionado
-              </p>
+              <p className="text-muted-foreground">No hay movimientos en el período</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="table-header">
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Producto</TableHead>
-                  <TableHead>Cantidad</TableHead>
-                  <TableHead>Precio Unit.</TableHead>
-                  <TableHead>Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredMovements?.map((movement) => (
-                  <TableRow key={movement.id}>
-                    <TableCell>
-                      {format(new Date(movement.movement_date), "dd MMM yyyy", { locale: es })}
-                    </TableCell>
-                    <TableCell>
-                      <span className={cn(
-                        "px-2.5 py-0.5 rounded-full text-xs font-medium",
-                        movement.movement_type === "entrada"
-                          ? "bg-success/15 text-success"
-                          : "bg-primary/15 text-primary"
-                      )}>
-                        {movement.movement_type === "entrada" ? "Entrada" : "Salida"}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{movement.product?.name}</p>
-                        <p className="text-xs text-muted-foreground font-mono">
-                          {movement.product?.code}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {Number(movement.quantity).toFixed(2)} {movement.product?.unit}
-                    </TableCell>
-                    <TableCell>${Number(movement.unit_price).toFixed(2)}</TableCell>
-                    <TableCell className={cn(
-                      "font-semibold",
-                      movement.movement_type === "entrada" ? "text-warning" : "text-success"
-                    )}>
-                      ${Number(movement.total_amount).toFixed(2)}
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="table-header">
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead className="hidden sm:table-cell">Producto</TableHead>
+                    <TableHead>Cant.</TableHead>
+                    <TableHead className="hidden sm:table-cell">P.Unit</TableHead>
+                    <TableHead>Total</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredMovements?.map((movement) => (
+                    <TableRow key={movement.id}>
+                      <TableCell className="text-xs sm:text-sm">{format(new Date(movement.movement_date), "dd/MM/yy")}</TableCell>
+                      <TableCell>
+                        <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", movement.movement_type === "entrada" ? "bg-success/15 text-success" : "bg-primary/15 text-primary")}>
+                          {movement.movement_type === "entrada" ? "E" : "S"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell max-w-[150px] truncate">{movement.product?.name}</TableCell>
+                      <TableCell>{Number(movement.quantity).toFixed(0)}</TableCell>
+                      <TableCell className="hidden sm:table-cell">${Number(movement.unit_price).toFixed(2)}</TableCell>
+                      <TableCell className={cn("font-semibold", movement.movement_type === "entrada" ? "text-warning" : "text-success")}>
+                        ${Number(movement.total_amount).toFixed(2)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </div>
       </div>

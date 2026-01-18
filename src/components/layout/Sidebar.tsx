@@ -5,26 +5,37 @@ import {
   ArrowDownToLine, 
   ArrowUpFromLine,
   BarChart3,
-  Warehouse
+  Warehouse,
+  Tag
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Productos", href: "/productos", icon: Package },
+  { name: "Categorías", href: "/categorias", icon: Tag },
   { name: "Entradas", href: "/entradas", icon: ArrowDownToLine },
   { name: "Salidas", href: "/salidas", icon: ArrowUpFromLine },
   { name: "Reportes", href: "/reportes", icon: BarChart3 },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  isMobileOpen?: boolean;
+  onMobileClose?: () => void;
+}
+
+export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
   const location = useLocation();
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
+    <aside className={cn(
+      "fixed left-0 top-0 h-screen w-64 bg-sidebar border-r border-sidebar-border flex flex-col z-50 transition-transform duration-300",
+      "lg:translate-x-0",
+      isMobileOpen ? "translate-x-0" : "-translate-x-full"
+    )}>
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
-        <Link to="/" className="flex items-center gap-3">
+        <Link to="/" className="flex items-center gap-3" onClick={onMobileClose}>
           <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center">
             <Warehouse className="w-5 h-5 text-sidebar-primary-foreground" />
           </div>
@@ -43,6 +54,7 @@ export function Sidebar() {
             <Link
               key={item.name}
               to={item.href}
+              onClick={onMobileClose}
               className={cn(
                 "nav-link",
                 isActive && "nav-link-active"

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Product, UNITS } from "@/types/inventory";
 import { useCreateProduct, useUpdateProduct } from "@/hooks/useProducts";
+import { useCategories } from "@/hooks/useCategories";
 
 const productSchema = z.object({
   code: z.string().min(1, "El código es requerido"),
@@ -19,6 +20,7 @@ const productSchema = z.object({
   stock: z.coerce.number().min(0, "El stock debe ser mayor o igual a 0"),
   unit: z.string().min(1, "La unidad es requerida"),
   low_stock_threshold: z.coerce.number().min(0, "El umbral debe ser mayor o igual a 0"),
+  category_id: z.string().optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -32,27 +34,60 @@ interface ProductFormDialogProps {
 export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDialogProps) {
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
+  const { data: categories } = useCategories();
   const isEditing = !!product;
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
-      code: product?.code || "",
-      name: product?.name || "",
-      description: product?.description || "",
-      price_usd: product?.price_usd || 0,
-      stock: product?.stock || 0,
-      unit: product?.unit || "unidades",
-      low_stock_threshold: product?.low_stock_threshold || 5,
+      code: "",
+      name: "",
+      description: "",
+      price_usd: 0,
+      stock: 0,
+      unit: "unidades",
+      low_stock_threshold: 5,
+      category_id: "",
     },
   });
 
+  useEffect(() => {
+    if (product) {
+      form.reset({
+        code: product.code,
+        name: product.name,
+        description: product.description || "",
+        price_usd: product.price_usd,
+        stock: product.stock,
+        unit: product.unit,
+        low_stock_threshold: product.low_stock_threshold,
+        category_id: product.category_id || "",
+      });
+    } else {
+      form.reset({
+        code: "",
+        name: "",
+        description: "",
+        price_usd: 0,
+        stock: 0,
+        unit: "unidades",
+        low_stock_threshold: 5,
+        category_id: "",
+      });
+    }
+  }, [product, form]);
+
   const onSubmit = async (data: ProductFormData) => {
     try {
+      const payload = {
+        ...data,
+        category_id: data.category_id || null,
+      };
+      
       if (isEditing && product) {
-        await updateProduct.mutateAsync({ id: product.id, ...data } as any);
+        await updateProduct.mutateAsync({ id: product.id, ...payload } as any);
       } else {
-        await createProduct.mutateAsync(data as any);
+        await createProduct.mutateAsync(payload as any);
       }
       onOpenChange(false);
       form.reset();
@@ -63,7 +98,7 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] bg-card">
+      <DialogContent className="sm:max-w-[500px] bg-card mx-4 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-xl">
             {isEditing ? "Editar Producto" : "Nuevo Producto"}
@@ -72,7 +107,7 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="code"
@@ -93,7 +128,7 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Unidad *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar" />
@@ -122,6 +157,38 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
                   <FormControl>
                     <Input placeholder="Nombre del producto" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="category_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Categoría</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar categoría" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="bg-popover">
+                      <SelectItem value="">Sin categoría</SelectItem>
+                      {categories?.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: cat.color }}
+                            />
+                            {cat.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
