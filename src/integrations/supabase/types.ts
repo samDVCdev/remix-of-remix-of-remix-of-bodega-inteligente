@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      categories: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       inventory_movements: {
         Row: {
           created_at: string
@@ -21,10 +48,12 @@ export type Database = {
           movement_date: string
           movement_type: string
           notes: string | null
+          package_type: string | null
           product_id: string
           quantity: number
           total_amount: number
           unit_price: number
+          units_per_package: number | null
         }
         Insert: {
           created_at?: string
@@ -32,10 +61,12 @@ export type Database = {
           movement_date?: string
           movement_type: string
           notes?: string | null
+          package_type?: string | null
           product_id: string
           quantity: number
           total_amount: number
           unit_price: number
+          units_per_package?: number | null
         }
         Update: {
           created_at?: string
@@ -43,10 +74,12 @@ export type Database = {
           movement_date?: string
           movement_type?: string
           notes?: string | null
+          package_type?: string | null
           product_id?: string
           quantity?: number
           total_amount?: number
           unit_price?: number
+          units_per_package?: number | null
         }
         Relationships: [
           {
@@ -60,6 +93,7 @@ export type Database = {
       }
       products: {
         Row: {
+          category_id: string | null
           code: string
           created_at: string
           description: string | null
@@ -72,6 +106,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          category_id?: string | null
           code: string
           created_at?: string
           description?: string | null
@@ -84,6 +119,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          category_id?: string | null
           code?: string
           created_at?: string
           description?: string | null
@@ -95,7 +131,15 @@ export type Database = {
           unit?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

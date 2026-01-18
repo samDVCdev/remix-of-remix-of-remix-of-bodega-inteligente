@@ -66,6 +66,11 @@ export function useDashboardStats() {
         .sort((a, b) => b.totalSold - a.totalSold)
         .slice(0, 5);
 
+      // Recent products (last 10 by created_at)
+      const recentProducts = (products || [])
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 10);
+
       return {
         totalProducts,
         totalInventoryValue,
@@ -73,6 +78,7 @@ export function useDashboardStats() {
         todayExpenses,
         lowStockProducts: lowStockProducts as Product[],
         topSellingProducts,
+        recentProducts: recentProducts as Product[],
       };
     },
   });
