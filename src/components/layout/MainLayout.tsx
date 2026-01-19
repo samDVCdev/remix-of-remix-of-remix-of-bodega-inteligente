@@ -1,6 +1,8 @@
 import { ReactNode, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Sidebar } from "./Sidebar";
+import { MobileBottomNav } from "./MobileBottomNav";
+import { CurrencyToggle } from "./CurrencyToggle";
 import { Button } from "@/components/ui/button";
 
 interface MainLayoutProps {
@@ -17,14 +19,17 @@ export function MainLayout({ children }: MainLayoutProps) {
         <div className="flex items-center gap-2">
           <span className="font-display text-lg font-bold text-sidebar-foreground">B0</span>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="text-sidebar-foreground hover:bg-sidebar-accent"
-        >
-          {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </Button>
+        <div className="flex items-center gap-2">
+          <CurrencyToggle />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="text-sidebar-foreground hover:bg-sidebar-accent"
+          >
+            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </Button>
+        </div>
       </header>
 
       {/* Mobile Sidebar Overlay */}
@@ -42,9 +47,12 @@ export function MainLayout({ children }: MainLayoutProps) {
       />
 
       {/* Main Content */}
-      <main className="lg:ml-64 pt-16 lg:pt-0 p-4 sm:p-6 lg:p-8">
+      <main className="lg:ml-64 pt-16 lg:pt-0 pb-20 lg:pb-0 p-4 sm:p-6 lg:p-8">
         {children}
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
     </div>
   );
 }

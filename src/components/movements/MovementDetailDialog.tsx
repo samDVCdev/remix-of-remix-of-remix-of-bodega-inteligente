@@ -1,9 +1,9 @@
+import { ArrowDownToLine, ShoppingCart, Calendar, Package, DollarSign, FileText, Hash } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { InventoryMovement } from "@/types/inventory";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowDownToLine, ArrowUpFromLine, Package, Calendar, DollarSign, FileText, Layers } from "lucide-react";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface MovementDetailDialogProps {
   open: boolean;
@@ -12,10 +12,12 @@ interface MovementDetailDialogProps {
 }
 
 export function MovementDetailDialog({ open, onOpenChange, movement }: MovementDetailDialogProps) {
+  const { formatPrice } = useCurrency();
+  
   if (!movement) return null;
 
   const isEntry = movement.movement_type === "entrada";
-  const Icon = isEntry ? ArrowDownToLine : ArrowUpFromLine;
+  const Icon = isEntry ? ArrowDownToLine : ShoppingCart;
   const colorClass = isEntry ? "text-success" : "text-primary";
   const bgColorClass = isEntry ? "bg-success/10" : "bg-primary/10";
 
@@ -27,99 +29,91 @@ export function MovementDetailDialog({ open, onOpenChange, movement }: MovementD
             <div className={`p-2 rounded-lg ${bgColorClass}`}>
               <Icon className={`w-5 h-5 ${colorClass}`} />
             </div>
-            Detalle de {isEntry ? "Entrada" : "Salida"}
+            Detalle de {isEntry ? "Entrada" : "Venta"}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Product Info */}
-          <div className="p-4 rounded-lg bg-muted/50 border border-border">
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-background">
-                <Package className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold text-foreground">{movement.product?.name}</p>
+          <div className={`p-4 rounded-lg ${bgColorClass} border ${isEntry ? "border-success/20" : "border-primary/20"}`}>
+            <div className="flex items-center gap-3">
+              <Package className={`w-8 h-8 ${colorClass}`} />
+              <div>
+                <p className="font-display font-bold text-lg">{movement.product?.name}</p>
                 <p className="text-sm text-muted-foreground font-mono">{movement.product?.code}</p>
+                {movement.product?.category && (
+                  <span 
+                    className="inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                    style={{ 
+                      backgroundColor: `${movement.product.category.color}20`,
+                      color: movement.product.category.color
+                    }}
+                  >
+                    {movement.product.category.name}
+                  </span>
+                )}
               </div>
-              <Badge variant={isEntry ? "default" : "secondary"} className={isEntry ? "bg-success" : ""}>
-                {isEntry ? "Entrada" : "Salida"}
-              </Badge>
             </div>
           </div>
 
           {/* Details Grid */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="stat-card p-4">
+              <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Calendar className="w-4 h-4" />
-                <span className="text-sm">Fecha</span>
+                <span className="text-xs font-medium">Fecha</span>
               </div>
-              <p className="font-medium pl-6">
-                {format(new Date(movement.movement_date), "dd 'de' MMMM, yyyy", { locale: es })}
+              <p className="font-semibold">
+                {format(new Date(movement.movement_date), "dd MMM yyyy", { locale: es })}
               </p>
             </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Layers className="w-4 h-4" />
-                <span className="text-sm">Cantidad</span>
+            <div className="stat-card p-4">
+              <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                <Hash className="w-4 h-4" />
+                <span className="text-xs font-medium">Cantidad</span>
               </div>
-              <p className="font-medium pl-6">
+              <p className="font-semibold">
                 {Number(movement.quantity).toFixed(2)} {movement.product?.unit}
               </p>
             </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="stat-card p-4">
+              <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <DollarSign className="w-4 h-4" />
-                <span className="text-sm">Precio Unitario</span>
+                <span className="text-xs font-medium">Precio Unitario</span>
               </div>
-              <p className="font-medium pl-6">${Number(movement.unit_price).toFixed(2)}</p>
+              <p className="font-semibold">
+                {formatPrice(Number(movement.unit_price))}
+              </p>
             </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-muted-foreground">
+            <div className={`stat-card p-4 ${bgColorClass}`}>
+              <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <DollarSign className="w-4 h-4" />
-                <span className="text-sm">Total</span>
+                <span className="text-xs font-medium">Total</span>
               </div>
-              <p className={`font-bold pl-6 text-lg ${colorClass}`}>
-                ${Number(movement.total_amount).toFixed(2)}
+              <p className={`font-bold text-lg ${colorClass}`}>
+                {formatPrice(Number(movement.total_amount))}
               </p>
             </div>
           </div>
 
-          {/* Package Info for entries */}
-          {isEntry && movement.package_type && movement.package_type !== "individual" && (
-            <div className="p-3 rounded-lg bg-muted/30 border border-border">
-              <p className="text-sm text-muted-foreground">
-                Tipo de empaque: <span className="font-medium text-foreground capitalize">{movement.package_type}</span>
-              </p>
-              {movement.units_per_package && movement.units_per_package > 1 && (
-                <p className="text-sm text-muted-foreground">
-                  Unidades por {movement.package_type}: <span className="font-medium text-foreground">{movement.units_per_package}</span>
-                </p>
-              )}
-            </div>
-          )}
-
           {/* Notes */}
           {movement.notes && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="stat-card p-4">
+              <div className="flex items-center gap-2 text-muted-foreground mb-2">
                 <FileText className="w-4 h-4" />
-                <span className="text-sm">Notas</span>
+                <span className="text-xs font-medium">Notas</span>
               </div>
-              <p className="text-sm text-foreground bg-muted/30 p-3 rounded-lg border border-border">
-                {movement.notes}
-              </p>
+              <p className="text-sm">{movement.notes}</p>
             </div>
           )}
 
-          {/* Timestamp */}
-          <p className="text-xs text-muted-foreground text-center pt-2">
-            Registrado el {format(new Date(movement.created_at), "dd/MM/yyyy 'a las' HH:mm", { locale: es })}
-          </p>
+          {/* Metadata */}
+          <div className="text-xs text-muted-foreground text-center pt-2 border-t border-border">
+            Registrado: {format(new Date(movement.created_at), "dd/MM/yyyy HH:mm", { locale: es })}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -11,11 +11,11 @@ export function exportProductsToExcel(products: Product[]) {
     'Código': p.code,
     'Nombre': p.name,
     'Descripción': p.description || '',
+    'Categoría': p.category?.name || 'Sin categoría',
     'Precio (USD)': p.price_usd,
     'Stock': p.stock,
     'Unidad': p.unit,
     'Stock Mínimo': p.low_stock_threshold,
-    'Categoría': p.category?.name || 'Sin categoría',
   }));
 
   const ws = XLSX.utils.json_to_sheet(data);
@@ -37,17 +37,18 @@ export function exportProductsToPDF(products: Product[]) {
 
   const tableData = products.map(p => [
     p.code,
-    p.name.substring(0, 25),
+    p.name.substring(0, 20),
+    p.category?.name || '-',
     `$${Number(p.price_usd).toFixed(2)}`,
     `${Number(p.stock).toFixed(0)} ${p.unit}`,
     p.stock <= p.low_stock_threshold ? 'Bajo' : 'OK',
   ]);
 
   autoTable(doc, {
-    head: [['Código', 'Nombre', 'Precio', 'Stock', 'Estado']],
+    head: [['Código', 'Nombre', 'Categoría', 'Precio', 'Stock', 'Estado']],
     body: tableData,
     startY: 42,
-    styles: { fontSize: 9 },
+    styles: { fontSize: 8 },
     headStyles: { fillColor: [37, 99, 235] },
   });
 
@@ -58,9 +59,10 @@ export function exportProductsToPDF(products: Product[]) {
 export function exportMovementsToExcel(movements: InventoryMovement[], startDate: string, endDate: string) {
   const data = movements.map(m => ({
     'Fecha': format(new Date(m.movement_date), 'dd/MM/yyyy'),
-    'Tipo': m.movement_type === 'entrada' ? 'Entrada' : 'Salida',
+    'Tipo': m.movement_type === 'entrada' ? 'Entrada' : 'Venta',
     'Producto': m.product?.name || '',
     'Código': m.product?.code || '',
+    'Categoría': m.product?.category?.name || 'Sin categoría',
     'Cantidad': m.quantity,
     'Unidad': m.product?.unit || '',
     'Precio Unit.': m.unit_price,
@@ -68,7 +70,7 @@ export function exportMovementsToExcel(movements: InventoryMovement[], startDate
   }));
 
   const totalEntradas = movements.filter(m => m.movement_type === 'entrada').reduce((s, m) => s + m.total_amount, 0);
-  const totalSalidas = movements.filter(m => m.movement_type === 'salida').reduce((s, m) => s + m.total_amount, 0);
+  const totalVentas = movements.filter(m => m.movement_type === 'salida').reduce((s, m) => s + m.total_amount, 0);
 
   // Add summary rows
   data.push({} as any);
@@ -77,6 +79,7 @@ export function exportMovementsToExcel(movements: InventoryMovement[], startDate
     'Tipo': '',
     'Producto': '',
     'Código': '',
+    'Categoría': '',
     'Cantidad': '' as any,
     'Unidad': '',
     'Precio Unit.': '' as any,
@@ -87,6 +90,7 @@ export function exportMovementsToExcel(movements: InventoryMovement[], startDate
     'Tipo': '',
     'Producto': '',
     'Código': '',
+    'Categoría': '',
     'Cantidad': '' as any,
     'Unidad': '',
     'Precio Unit.': '' as any,
@@ -97,20 +101,22 @@ export function exportMovementsToExcel(movements: InventoryMovement[], startDate
     'Tipo': '',
     'Producto': '',
     'Código': '',
+    'Categoría': '',
     'Cantidad': '' as any,
     'Unidad': '',
     'Precio Unit.': '' as any,
-    'Total': totalSalidas,
+    'Total': totalVentas,
   });
   data.push({
     'Fecha': 'Balance:',
     'Tipo': '',
     'Producto': '',
     'Código': '',
+    'Categoría': '',
     'Cantidad': '' as any,
     'Unidad': '',
     'Precio Unit.': '' as any,
-    'Total': totalSalidas - totalEntradas,
+    'Total': totalVentas - totalEntradas,
   });
 
   const ws = XLSX.utils.json_to_sheet(data);
@@ -131,27 +137,28 @@ export function exportMovementsToPDF(movements: InventoryMovement[], startDate: 
   doc.text(`Generado: ${format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: es })}`, 14, 36);
 
   const totalEntradas = movements.filter(m => m.movement_type === 'entrada').reduce((s, m) => s + m.total_amount, 0);
-  const totalSalidas = movements.filter(m => m.movement_type === 'salida').reduce((s, m) => s + m.total_amount, 0);
-  const balance = totalSalidas - totalEntradas;
+  const totalVentas = movements.filter(m => m.movement_type === 'salida').reduce((s, m) => s + m.total_amount, 0);
+  const balance = totalVentas - totalEntradas;
 
   doc.text(`Total Compras: $${totalEntradas.toFixed(2)}`, 14, 44);
-  doc.text(`Total Ventas: $${totalSalidas.toFixed(2)}`, 14, 50);
+  doc.text(`Total Ventas: $${totalVentas.toFixed(2)}`, 14, 50);
   doc.text(`Balance: $${balance.toFixed(2)}`, 14, 56);
 
   const tableData = movements.map(m => [
     format(new Date(m.movement_date), 'dd/MM/yy'),
-    m.movement_type === 'entrada' ? 'Entrada' : 'Salida',
-    m.product?.name?.substring(0, 20) || '',
+    m.movement_type === 'entrada' ? 'Entrada' : 'Venta',
+    m.product?.name?.substring(0, 15) || '',
+    m.product?.category?.name?.substring(0, 10) || '-',
     m.quantity.toString(),
     `$${Number(m.unit_price).toFixed(2)}`,
     `$${Number(m.total_amount).toFixed(2)}`,
   ]);
 
   autoTable(doc, {
-    head: [['Fecha', 'Tipo', 'Producto', 'Cant.', 'P.Unit', 'Total']],
+    head: [['Fecha', 'Tipo', 'Producto', 'Categoría', 'Cant.', 'P.Unit', 'Total']],
     body: tableData,
     startY: 64,
-    styles: { fontSize: 8 },
+    styles: { fontSize: 7 },
     headStyles: { fillColor: [37, 99, 235] },
   });
 

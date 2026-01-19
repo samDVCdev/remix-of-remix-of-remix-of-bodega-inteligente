@@ -3,19 +3,18 @@ import {
   LayoutDashboard, 
   Package, 
   ArrowDownToLine, 
-  ArrowUpFromLine,
+  ShoppingCart,
   BarChart3,
-  Warehouse,
-  Tag
+  Warehouse
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CurrencyToggle } from "./CurrencyToggle";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Productos", href: "/productos", icon: Package },
-  { name: "Categorías", href: "/categorias", icon: Tag },
   { name: "Entradas", href: "/entradas", icon: ArrowDownToLine },
-  { name: "Salidas", href: "/salidas", icon: ArrowUpFromLine },
+  { name: "Ventas", href: "/ventas", icon: ShoppingCart },
   { name: "Reportes", href: "/reportes", icon: BarChart3 },
 ];
 
@@ -67,8 +66,11 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
         })}
       </nav>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-sidebar-border">
+      {/* Currency Toggle & Footer */}
+      <div className="p-4 border-t border-sidebar-border space-y-3">
+        <div className="flex justify-center">
+          <CurrencyToggle />
+        </div>
         <p className="text-xs text-sidebar-foreground/50 text-center">
           Bodega B0 © 2024
         </p>

@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart3, Download, FileText, FileSpreadsheet } from "lucide-react";
 import { useMovements } from "@/hooks/useMovements";
+import { useCurrency } from "@/hooks/useCurrency";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,7 @@ export default function ReportsPage() {
   const [filterType, setFilterType] = useState<string>("todos");
 
   const { data: movements, isLoading } = useMovements();
+  const { formatPrice, currencySymbol } = useCurrency();
 
   const filteredMovements = movements?.filter((m) => {
     const movementDate = new Date(m.movement_date);
@@ -38,11 +40,11 @@ export default function ReportsPage() {
     ?.filter((m) => m.movement_type === "entrada")
     .reduce((sum, m) => sum + Number(m.total_amount), 0) || 0;
 
-  const totalSalidas = filteredMovements
+  const totalVentas = filteredMovements
     ?.filter((m) => m.movement_type === "salida")
     .reduce((sum, m) => sum + Number(m.total_amount), 0) || 0;
 
-  const balance = totalSalidas - totalEntradas;
+  const balance = totalVentas - totalEntradas;
 
   return (
     <MainLayout>
@@ -101,7 +103,7 @@ export default function ReportsPage() {
                 <SelectContent className="bg-popover">
                   <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="entrada">Entradas</SelectItem>
-                  <SelectItem value="salida">Salidas</SelectItem>
+                  <SelectItem value="salida">Ventas</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -112,16 +114,16 @@ export default function ReportsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="stat-card bg-success/5 border-success/20">
             <p className="text-sm font-medium text-muted-foreground">Total Ventas</p>
-            <p className="text-xl sm:text-2xl font-display font-bold text-success">${totalSalidas.toFixed(2)}</p>
+            <p className="text-xl sm:text-2xl font-display font-bold text-success">{formatPrice(totalVentas)}</p>
           </div>
           <div className="stat-card bg-warning/5 border-warning/20">
             <p className="text-sm font-medium text-muted-foreground">Total Compras</p>
-            <p className="text-xl sm:text-2xl font-display font-bold text-warning">${totalEntradas.toFixed(2)}</p>
+            <p className="text-xl sm:text-2xl font-display font-bold text-warning">{formatPrice(totalEntradas)}</p>
           </div>
           <div className={cn("stat-card", balance >= 0 ? "bg-success/5 border-success/20" : "bg-destructive/5 border-destructive/20")}>
             <p className="text-sm font-medium text-muted-foreground">Balance</p>
             <p className={cn("text-xl sm:text-2xl font-display font-bold", balance >= 0 ? "text-success" : "text-destructive")}>
-              {balance >= 0 ? "+" : ""}{balance.toFixed(2)} USD
+              {balance >= 0 ? "+" : ""}{formatPrice(balance)}
             </p>
           </div>
         </div>
@@ -158,14 +160,14 @@ export default function ReportsPage() {
                       <TableCell className="text-xs sm:text-sm">{format(new Date(movement.movement_date), "dd/MM/yy")}</TableCell>
                       <TableCell>
                         <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", movement.movement_type === "entrada" ? "bg-success/15 text-success" : "bg-primary/15 text-primary")}>
-                          {movement.movement_type === "entrada" ? "E" : "S"}
+                          {movement.movement_type === "entrada" ? "E" : "V"}
                         </span>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell max-w-[150px] truncate">{movement.product?.name}</TableCell>
                       <TableCell>{Number(movement.quantity).toFixed(0)}</TableCell>
-                      <TableCell className="hidden sm:table-cell">${Number(movement.unit_price).toFixed(2)}</TableCell>
+                      <TableCell className="hidden sm:table-cell">{formatPrice(Number(movement.unit_price))}</TableCell>
                       <TableCell className={cn("font-semibold", movement.movement_type === "entrada" ? "text-warning" : "text-success")}>
-                        ${Number(movement.total_amount).toFixed(2)}
+                        {formatPrice(Number(movement.total_amount))}
                       </TableCell>
                     </TableRow>
                   ))}

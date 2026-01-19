@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Minus, Package } from "lucide-react";
+import { Plus, Trash2, Minus, Package, ShoppingCart, ArrowDownToLine } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,7 +94,7 @@ export function MultiMovementDialog({ open, onOpenChange, type }: MultiMovementD
       return;
     }
 
-    // Check stock for exits
+    // Check stock for sales
     if (type === "salida") {
       for (const item of validItems) {
         const product = products?.find(p => p.id === item.product_id);
@@ -120,30 +120,32 @@ export function MultiMovementDialog({ open, onOpenChange, type }: MultiMovementD
       
       const message = type === "entrada" 
         ? `Entrada registrada: ${validItems.length} producto(s)`
-        : `Salida registrada: ${validItems.length} producto(s)`;
+        : `Venta registrada: ${validItems.length} producto(s)`;
       toast.success(message);
       onOpenChange(false);
     } catch (error) {
-      toast.error(`Error al registrar ${type === "entrada" ? "la entrada" : "la salida"}`);
+      toast.error(`Error al registrar ${type === "entrada" ? "la entrada" : "la venta"}`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const title = type === "entrada" ? "Registrar Entradas" : "Registrar Salidas";
-  const subtitle = type === "entrada" 
-    ? "Registra múltiples productos en una sola entrada" 
-    : "Registra múltiples productos en una sola salida";
-  const iconColor = type === "entrada" ? "text-success" : "text-primary";
-  const bgColor = type === "entrada" ? "bg-success/10" : "bg-primary/10";
-  const borderColor = type === "entrada" ? "border-success/20" : "border-primary/20";
+  const isSale = type === "salida";
+  const title = isSale ? "Registrar Ventas" : "Registrar Entradas";
+  const subtitle = isSale 
+    ? "Registra múltiples productos en una sola venta" 
+    : "Registra múltiples productos en una sola entrada";
+  const iconColor = isSale ? "text-primary" : "text-success";
+  const bgColor = isSale ? "bg-primary/10" : "bg-success/10";
+  const borderColor = isSale ? "border-primary/20" : "border-success/20";
+  const Icon = isSale ? ShoppingCart : ArrowDownToLine;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[650px] bg-card max-h-[90vh] overflow-y-auto mx-4">
         <DialogHeader>
           <DialogTitle className="font-display text-xl flex items-center gap-2">
-            <Package className={`w-5 h-5 ${iconColor}`} />
+            <Icon className={`w-5 h-5 ${iconColor}`} />
             {title}
           </DialogTitle>
           <p className="text-sm text-muted-foreground">{subtitle}</p>
@@ -251,7 +253,7 @@ export function MultiMovementDialog({ open, onOpenChange, type }: MultiMovementD
                     {/* Price - editable */}
                     <div className="flex-1">
                       <label className="text-xs text-muted-foreground mb-1 block">
-                        Precio Unitario (USD)
+                        Precio Unitario
                       </label>
                       <Input
                         type="number"
@@ -275,7 +277,7 @@ export function MultiMovementDialog({ open, onOpenChange, type }: MultiMovementD
                   {selectedProduct && (
                     <p className="text-xs text-muted-foreground">
                       Stock disponible: <span className="font-medium">{selectedProduct.stock} {selectedProduct.unit}</span>
-                      {type === "salida" && item.quantity > selectedProduct.stock && (
+                      {isSale && item.quantity > selectedProduct.stock && (
                         <span className="text-destructive ml-2">⚠️ Stock insuficiente</span>
                       )}
                     </p>
@@ -324,7 +326,7 @@ export function MultiMovementDialog({ open, onOpenChange, type }: MultiMovementD
             >
               {isSubmitting 
                 ? "Registrando..." 
-                : type === "entrada" ? "Registrar Entradas" : "Registrar Salidas"
+                : isSale ? "Registrar Ventas" : "Registrar Entradas"
               }
             </Button>
           </div>
