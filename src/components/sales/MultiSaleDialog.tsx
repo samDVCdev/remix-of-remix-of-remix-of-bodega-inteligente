@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, ShoppingCart } from "lucide-react";
+import { Plus, Trash2, ShoppingCart, Minus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,14 +20,14 @@ export function MultiSaleDialog({ open, onOpenChange }: MultiSaleDialogProps) {
   const createMovement = useCreateMovement();
   
   const [items, setItems] = useState<MultiSaleItem[]>([
-    { product_id: "", quantity: 0, unit_price: 0 }
+    { product_id: "", quantity: 1, unit_price: 0 }
   ]);
   const [saleDate, setSaleDate] = useState(new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const addItem = () => {
-    setItems([...items, { product_id: "", quantity: 0, unit_price: 0 }]);
+    setItems([...items, { product_id: "", quantity: 1, unit_price: 0 }]);
   };
 
   const removeItem = (index: number) => {
@@ -52,6 +52,20 @@ export function MultiSaleDialog({ open, onOpenChange }: MultiSaleDialogProps) {
     setItems(newItems);
   };
 
+  const incrementQuantity = (index: number) => {
+    const newItems = [...items];
+    newItems[index].quantity = (newItems[index].quantity || 0) + 1;
+    setItems(newItems);
+  };
+
+  const decrementQuantity = (index: number) => {
+    const newItems = [...items];
+    if (newItems[index].quantity > 1) {
+      newItems[index].quantity = newItems[index].quantity - 1;
+      setItems(newItems);
+    }
+  };
+
   const getTotal = () => {
     return items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
   };
@@ -62,6 +76,15 @@ export function MultiSaleDialog({ open, onOpenChange }: MultiSaleDialogProps) {
     if (validItems.length === 0) {
       toast.error("Agrega al menos un producto válido");
       return;
+    }
+
+    // Check stock for sales
+    for (const item of validItems) {
+      const product = products?.find(p => p.id === item.product_id);
+      if (product && item.quantity > product.stock) {
+        toast.error(`Stock insuficiente para ${product.name}`);
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -79,7 +102,7 @@ export function MultiSaleDialog({ open, onOpenChange }: MultiSaleDialogProps) {
       
       toast.success(`Venta registrada: ${validItems.length} producto(s)`);
       onOpenChange(false);
-      setItems([{ product_id: "", quantity: 0, unit_price: 0 }]);
+      setItems([{ product_id: "", quantity: 1, unit_price: 0 }]);
       setNotes("");
     } catch (error) {
       toast.error("Error al registrar la venta");
@@ -89,7 +112,7 @@ export function MultiSaleDialog({ open, onOpenChange }: MultiSaleDialogProps) {
   };
 
   const reset = () => {
-    setItems([{ product_id: "", quantity: 0, unit_price: 0 }]);
+    setItems([{ product_id: "", quantity: 1, unit_price: 0 }]);
     setNotes("");
   };
 
@@ -98,12 +121,13 @@ export function MultiSaleDialog({ open, onOpenChange }: MultiSaleDialogProps) {
       if (!isOpen) reset();
       onOpenChange(isOpen);
     }}>
-      <DialogContent className="sm:max-w-[600px] bg-card max-h-[90vh] overflow-y-auto mx-4">
+      <DialogContent className="sm:max-w-[650px] bg-card max-h-[90vh] overflow-y-auto mx-4">
         <DialogHeader>
           <DialogTitle className="font-display text-xl flex items-center gap-2">
             <ShoppingCart className="w-5 h-5 text-primary" />
-            Registrar Venta Múltiple
+            Registrar Venta
           </DialogTitle>
+          <p className="text-sm text-muted-foreground">Registra múltiples productos en una sola venta</p>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -132,45 +156,29 @@ export function MultiSaleDialog({ open, onOpenChange }: MultiSaleDialogProps) {
             {items.map((item, index) => {
               const selectedProduct = products?.find(p => p.id === item.product_id);
               return (
-                <div key={index} className="flex flex-col sm:flex-row gap-2 p-3 rounded-lg bg-muted/30 border border-border">
-                  <Select 
-                    value={item.product_id} 
-                    onValueChange={(value) => updateItem(index, "product_id", value)}
-                  >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Seleccionar producto" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover max-h-[200px]">
-                      {products?.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          <span className="font-mono text-xs mr-2">{product.code}</span>
-                          {product.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
+                <div key={index} className="p-4 rounded-lg bg-muted/30 border border-border space-y-3">
+                  {/* Product Select */}
                   <div className="flex gap-2">
-                    <Input
-                      type="number"
-                      step="0.001"
-                      min="0"
-                      placeholder="Cant."
-                      value={item.quantity || ""}
-                      onChange={(e) => updateItem(index, "quantity", parseFloat(e.target.value) || 0)}
-                      className="w-20"
-                    />
-
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="Precio"
-                      value={item.unit_price || ""}
-                      onChange={(e) => updateItem(index, "unit_price", parseFloat(e.target.value) || 0)}
-                      className="w-24"
-                    />
-
+                    <Select 
+                      value={item.product_id} 
+                      onValueChange={(value) => updateItem(index, "product_id", value)}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Seleccionar producto" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover max-h-[200px]">
+                        {products?.map((product) => (
+                          <SelectItem key={product.id} value={product.id}>
+                            <span className="font-mono text-xs mr-2">{product.code}</span>
+                            {product.name}
+                            <span className="text-muted-foreground ml-2 text-xs">
+                              (Stock: {product.stock})
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    
                     <Button
                       type="button"
                       variant="ghost"
@@ -183,10 +191,75 @@ export function MultiSaleDialog({ open, onOpenChange }: MultiSaleDialogProps) {
                     </Button>
                   </div>
 
-                  {selectedProduct && (
-                    <div className="text-xs text-muted-foreground w-full sm:hidden">
-                      Stock: {selectedProduct.stock} {selectedProduct.unit}
+                  {/* Quantity and Price Row */}
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    {/* Quantity with +/- buttons */}
+                    <div className="flex-1">
+                      <label className="text-xs text-muted-foreground mb-1 block">
+                        Cantidad {selectedProduct && `(${selectedProduct.unit})`}
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => decrementQuantity(index)}
+                          disabled={item.quantity <= 1}
+                          className="h-10 w-10 shrink-0"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </Button>
+                        <Input
+                          type="number"
+                          step="0.001"
+                          min="0.001"
+                          value={item.quantity || ""}
+                          onChange={(e) => updateItem(index, "quantity", parseFloat(e.target.value) || 0)}
+                          className="text-center"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => incrementQuantity(index)}
+                          className="h-10 w-10 shrink-0"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
+
+                    {/* Price - editable */}
+                    <div className="flex-1">
+                      <label className="text-xs text-muted-foreground mb-1 block">
+                        Precio Unitario
+                      </label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={item.unit_price || ""}
+                        onChange={(e) => updateItem(index, "unit_price", parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+
+                    {/* Subtotal */}
+                    <div className="flex-1">
+                      <label className="text-xs text-muted-foreground mb-1 block">Subtotal</label>
+                      <div className="h-10 flex items-center px-3 rounded-md bg-primary/10 border-primary/20 border font-semibold text-primary">
+                        ${(item.quantity * item.unit_price).toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stock Info */}
+                  {selectedProduct && (
+                    <p className="text-xs text-muted-foreground">
+                      Stock disponible: <span className="font-medium">{selectedProduct.stock} {selectedProduct.unit}</span>
+                      {item.quantity > selectedProduct.stock && (
+                        <span className="text-destructive ml-2">⚠️ Stock insuficiente</span>
+                      )}
+                    </p>
                   )}
                 </div>
               );

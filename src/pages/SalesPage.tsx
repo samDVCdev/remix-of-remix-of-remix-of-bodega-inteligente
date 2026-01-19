@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, ArrowUpFromLine, Package, Eye } from "lucide-react";
+import { Plus, Trash2, ShoppingCart, Package, Eye } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -7,6 +7,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { MultiMovementDialog } from "@/components/movements/MultiMovementDialog";
 import { MovementDetailDialog } from "@/components/movements/MovementDetailDialog";
 import { useMovements, useDeleteMovement } from "@/hooks/useMovements";
+import { useCurrency } from "@/hooks/useCurrency";
 import { InventoryMovement } from "@/types/inventory";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -18,6 +19,7 @@ export default function SalesPage() {
 
   const { data: movements, isLoading } = useMovements("salida");
   const deleteMovement = useDeleteMovement();
+  const { formatPrice } = useCurrency();
 
   const handleDelete = async () => {
     if (deletingMovement) {
@@ -34,15 +36,15 @@ export default function SalesPage() {
           <div>
             <h1 className="text-3xl font-display font-bold text-foreground flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
-                <ArrowUpFromLine className="w-6 h-6 text-primary" />
+                <ShoppingCart className="w-6 h-6 text-primary" />
               </div>
-              Salidas
+              Ventas
             </h1>
-            <p className="text-muted-foreground mt-1">Registro de ventas y salidas de inventario</p>
+            <p className="text-muted-foreground mt-1">Registro de ventas de inventario</p>
           </div>
           <Button onClick={() => setIsFormOpen(true)} className="gap-2">
             <Plus className="w-4 h-4" />
-            Nueva Salida
+            Nueva Venta
           </Button>
         </div>
 
@@ -50,15 +52,15 @@ export default function SalesPage() {
         <div className="stat-card p-0 overflow-hidden">
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">
-              Cargando salidas...
+              Cargando ventas...
             </div>
           ) : movements?.length === 0 ? (
             <div className="p-12 text-center">
               <Package className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-              <p className="text-muted-foreground">No hay salidas registradas</p>
+              <p className="text-muted-foreground">No hay ventas registradas</p>
               <Button onClick={() => setIsFormOpen(true)} className="mt-4 gap-2">
                 <Plus className="w-4 h-4" />
-                Registrar Primera Salida
+                Registrar Primera Venta
               </Button>
             </div>
           ) : (
@@ -95,9 +97,9 @@ export default function SalesPage() {
                     <TableCell>
                       {Number(movement.quantity).toFixed(2)} {movement.product?.unit}
                     </TableCell>
-                    <TableCell>${Number(movement.unit_price).toFixed(2)}</TableCell>
+                    <TableCell>{formatPrice(Number(movement.unit_price))}</TableCell>
                     <TableCell className="font-semibold text-primary">
-                      ${Number(movement.total_amount).toFixed(2)}
+                      {formatPrice(Number(movement.total_amount))}
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate text-muted-foreground">
                       {movement.notes || "-"}
@@ -154,9 +156,9 @@ export default function SalesPage() {
       <AlertDialog open={!!deletingMovement} onOpenChange={() => setDeletingMovement(null)}>
         <AlertDialogContent className="bg-card">
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar salida?</AlertDialogTitle>
+            <AlertDialogTitle>¿Eliminar venta?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción eliminará la salida y revertirá el stock del producto. 
+              Esta acción eliminará la venta y revertirá el stock del producto. 
               Esta acción no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>

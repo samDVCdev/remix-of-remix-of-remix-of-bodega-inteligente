@@ -8,11 +8,13 @@ import { ProductsTable } from "@/components/dashboard/ProductsTable";
 import { MultiSaleDialog } from "@/components/sales/MultiSaleDialog";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useProducts } from "@/hooks/useProducts";
+import { useCurrency } from "@/hooks/useCurrency";
 import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const { data: stats, isLoading } = useDashboardStats();
   const { data: products, isLoading: productsLoading } = useProducts();
+  const { formatPrice } = useCurrency();
   const [isSaleOpen, setIsSaleOpen] = useState(false);
 
   return (
@@ -40,20 +42,19 @@ const Index = () => {
           />
           <StatCard
             title="Valor Inventario"
-            value={isLoading ? "..." : `$${(stats?.totalInventoryValue || 0).toFixed(2)}`}
-            subtitle="USD"
+            value={isLoading ? "..." : formatPrice(stats?.totalInventoryValue || 0)}
             icon={DollarSign}
             variant="primary"
           />
           <StatCard
             title="Ventas del Día"
-            value={isLoading ? "..." : `$${(stats?.todayIncome || 0).toFixed(2)}`}
+            value={isLoading ? "..." : formatPrice(stats?.todayIncome || 0)}
             icon={TrendingUp}
             variant="success"
           />
           <StatCard
-            title="Gastos del Día"
-            value={isLoading ? "..." : `$${(stats?.todayExpenses || 0).toFixed(2)}`}
+            title="Compras del Día"
+            value={isLoading ? "..." : formatPrice(stats?.todayExpenses || 0)}
             icon={TrendingDown}
             variant="warning"
           />

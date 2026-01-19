@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Search, Package, Download, FileSpreadsheet } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Package, Download, FileSpreadsheet, Tag } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ProductFormDialog } from "@/components/products/ProductFormDialog";
+import { CategoryFormDialog } from "@/components/categories/CategoryFormDialog";
 import { useProducts, useDeleteProduct } from "@/hooks/useProducts";
+import { useCurrency } from "@/hooks/useCurrency";
 import { Product } from "@/types/inventory";
 import { cn } from "@/lib/utils";
 import { exportProductsToExcel, exportProductsToPDF } from "@/lib/exportUtils";
@@ -14,11 +16,13 @@ import { exportProductsToExcel, exportProductsToPDF } from "@/lib/exportUtils";
 export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
 
   const { data: products, isLoading } = useProducts();
   const deleteProduct = useDeleteProduct();
+  const { formatPrice } = useCurrency();
 
   const filteredProducts = products?.filter(
     (p) =>
@@ -53,7 +57,11 @@ export default function ProductsPage() {
               <h1 className="text-2xl sm:text-3xl font-display font-bold text-foreground">Productos</h1>
               <p className="text-muted-foreground text-sm sm:text-base">Gestiona el catálogo de productos</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={() => setIsCategoryOpen(true)} className="gap-1">
+                <Tag className="w-4 h-4" />
+                <span className="hidden sm:inline">Categorías</span>
+              </Button>
               <Button variant="outline" size="sm" onClick={() => products && exportProductsToExcel(products)} disabled={!products?.length} className="gap-1">
                 <FileSpreadsheet className="w-4 h-4" />
                 <span className="hidden sm:inline">Excel</span>
@@ -97,6 +105,7 @@ export default function ProductsPage() {
                   <TableRow className="table-header">
                     <TableHead>Código</TableHead>
                     <TableHead>Nombre</TableHead>
+                    <TableHead className="hidden md:table-cell">Categoría</TableHead>
                     <TableHead className="hidden sm:table-cell">Precio</TableHead>
                     <TableHead>Stock</TableHead>
                     <TableHead className="hidden md:table-cell">Estado</TableHead>
@@ -110,7 +119,22 @@ export default function ProductsPage() {
                       <TableRow key={product.id}>
                         <TableCell className="font-mono text-xs">{product.code}</TableCell>
                         <TableCell className="font-medium max-w-[120px] truncate">{product.name}</TableCell>
-                        <TableCell className="hidden sm:table-cell">${Number(product.price_usd).toFixed(2)}</TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {product.category ? (
+                            <span 
+                              className="px-2 py-0.5 rounded-full text-xs font-medium"
+                              style={{ 
+                                backgroundColor: `${product.category.color}20`,
+                                color: product.category.color
+                              }}
+                            >
+                              {product.category.name}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">{formatPrice(Number(product.price_usd))}</TableCell>
                         <TableCell>{Number(product.stock).toFixed(0)}</TableCell>
                         <TableCell className="hidden md:table-cell">
                           <span className={cn(isLowStock ? "badge-low-stock" : "badge-in-stock")}>{isLowStock ? "Bajo" : "OK"}</span>
@@ -132,6 +156,7 @@ export default function ProductsPage() {
       </div>
 
       <ProductFormDialog open={isFormOpen} onOpenChange={handleFormClose} product={editingProduct} />
+      <CategoryFormDialog open={isCategoryOpen} onOpenChange={setIsCategoryOpen} />
 
       <AlertDialog open={!!deletingProduct} onOpenChange={() => setDeletingProduct(null)}>
         <AlertDialogContent className="bg-card mx-4">
