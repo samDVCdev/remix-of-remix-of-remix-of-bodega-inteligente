@@ -32,6 +32,9 @@ interface CreateMovementData {
   unit_price: number;
   movement_date: string;
   notes?: string;
+  is_credit?: boolean;
+  customer_name?: string;
+  sold_by?: string;
 }
 
 export function useCreateMovement() {
@@ -43,7 +46,19 @@ export function useCreateMovement() {
       
       const { data: result, error } = await supabase
         .from("inventory_movements")
-        .insert({ ...data, total_amount })
+        .insert({ 
+          product_id: data.product_id,
+          movement_type: data.movement_type,
+          quantity: data.quantity,
+          unit_price: data.unit_price,
+          movement_date: data.movement_date,
+          notes: data.notes,
+          is_credit: data.is_credit || false,
+          is_paid: !data.is_credit,
+          customer_name: data.customer_name,
+          sold_by: data.sold_by,
+          total_amount,
+        })
         .select()
         .single();
       

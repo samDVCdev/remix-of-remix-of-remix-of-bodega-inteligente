@@ -5,17 +5,28 @@ import {
   ArrowDownToLine, 
   ShoppingCart,
   BarChart3,
-  Warehouse
+  Warehouse,
+  CreditCard,
+  LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CurrencyToggle } from "./CurrencyToggle";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 
-const navigation = [
+const adminNavigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Productos", href: "/productos", icon: Package },
   { name: "Entradas", href: "/entradas", icon: ArrowDownToLine },
   { name: "Ventas", href: "/ventas", icon: ShoppingCart },
+  { name: "Cuentas por Cobrar", href: "/cuentas-por-cobrar", icon: CreditCard },
   { name: "Reportes", href: "/reportes", icon: BarChart3 },
+];
+
+const employeeNavigation = [
+  { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Productos", href: "/productos", icon: Package },
+  { name: "Ventas", href: "/ventas", icon: ShoppingCart },
 ];
 
 interface SidebarProps {
@@ -25,6 +36,9 @@ interface SidebarProps {
 
 export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
   const location = useLocation();
+  const { isAdmin, profile, signOut } = useAuth();
+  
+  const navigation = isAdmin ? adminNavigation : employeeNavigation;
 
   return (
     <aside className={cn(
@@ -40,7 +54,9 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
           </div>
           <div>
             <h1 className="font-display text-xl font-bold text-sidebar-foreground">B0</h1>
-            <p className="text-xs text-sidebar-foreground/60">Sistema de Inventario</p>
+            <p className="text-xs text-sidebar-foreground/60">
+              {profile?.full_name || "Sistema de Inventario"}
+            </p>
           </div>
         </Link>
       </div>
@@ -66,13 +82,21 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
         })}
       </nav>
 
-      {/* Currency Toggle & Footer */}
+      {/* Footer */}
       <div className="p-4 border-t border-sidebar-border space-y-3">
         <div className="flex justify-center">
           <CurrencyToggle />
         </div>
+        <Button 
+          variant="ghost" 
+          onClick={signOut}
+          className="w-full justify-start gap-2 text-sidebar-foreground/70 hover:text-sidebar-foreground"
+        >
+          <LogOut className="w-4 h-4" />
+          Cerrar Sesión
+        </Button>
         <p className="text-xs text-sidebar-foreground/50 text-center">
-          Bodega B0 © 2024
+          {isAdmin ? "Administrador" : "Empleado"} · B0 © 2024
         </p>
       </div>
     </aside>

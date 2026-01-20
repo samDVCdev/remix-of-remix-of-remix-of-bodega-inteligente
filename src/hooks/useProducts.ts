@@ -39,10 +39,12 @@ interface CreateProductData {
   code: string;
   name: string;
   description?: string;
-  price_usd: number;
+  purchase_price: number;
+  sale_price: number;
   stock: number;
   unit: string;
   low_stock_threshold?: number;
+  category_id?: string | null;
 }
 
 export function useCreateProduct() {

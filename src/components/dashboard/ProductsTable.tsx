@@ -67,7 +67,7 @@ export function ProductsTable({ products, isLoading }: ProductsTableProps) {
                 <TableRow key={product.id}>
                   <TableCell className="font-mono text-xs">{product.code}</TableCell>
                   <TableCell className="font-medium max-w-[120px] truncate">{product.name}</TableCell>
-                  <TableCell className="hidden sm:table-cell">${Number(product.price_usd).toFixed(2)}</TableCell>
+                  <TableCell className="hidden sm:table-cell">${Number(product.sale_price).toFixed(2)}</TableCell>
                   <TableCell>{Number(product.stock).toFixed(0)}</TableCell>
                   <TableCell className="hidden md:table-cell">
                     <span className={cn(

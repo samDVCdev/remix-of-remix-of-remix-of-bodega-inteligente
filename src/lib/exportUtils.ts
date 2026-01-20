@@ -12,7 +12,8 @@ export function exportProductsToExcel(products: Product[]) {
     'Nombre': p.name,
     'Descripción': p.description || '',
     'Categoría': p.category?.name || 'Sin categoría',
-    'Precio (USD)': p.price_usd,
+    'Precio Compra': p.purchase_price,
+    'Precio Venta': p.sale_price,
     'Stock': p.stock,
     'Unidad': p.unit,
     'Stock Mínimo': p.low_stock_threshold,
@@ -39,7 +40,7 @@ export function exportProductsToPDF(products: Product[]) {
     p.code,
     p.name.substring(0, 20),
     p.category?.name || '-',
-    `$${Number(p.price_usd).toFixed(2)}`,
+    `$${Number(p.sale_price).toFixed(2)}`,
     `${Number(p.stock).toFixed(0)} ${p.unit}`,
     p.stock <= p.low_stock_threshold ? 'Bajo' : 'OK',
   ]);

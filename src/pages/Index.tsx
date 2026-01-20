@@ -6,6 +6,7 @@ import { LowStockAlert } from "@/components/dashboard/LowStockAlert";
 import { TopProducts } from "@/components/dashboard/TopProducts";
 import { ProductsTable } from "@/components/dashboard/ProductsTable";
 import { MultiSaleDialog } from "@/components/sales/MultiSaleDialog";
+import { CurrencyToggle } from "@/components/layout/CurrencyToggle";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useProducts } from "@/hooks/useProducts";
 import { useCurrency } from "@/hooks/useCurrency";
@@ -26,10 +27,15 @@ const Index = () => {
             <h1 className="text-2xl sm:text-3xl font-display font-bold text-foreground">Dashboard</h1>
             <p className="text-muted-foreground text-sm sm:text-base">Resumen del inventario de tu bodega</p>
           </div>
-          <Button onClick={() => setIsSaleOpen(true)} className="gap-2 w-full sm:w-auto">
-            <ShoppingCart className="w-4 h-4" />
-            Registrar Venta
-          </Button>
+          <div className="flex items-center gap-2">
+            <div className="lg:hidden">
+              <CurrencyToggle />
+            </div>
+            <Button onClick={() => setIsSaleOpen(true)} className="gap-2 flex-1 sm:flex-none">
+              <ShoppingCart className="w-4 h-4" />
+              Registrar Venta
+            </Button>
+          </div>
         </div>
 
         {/* Stats Grid */}
