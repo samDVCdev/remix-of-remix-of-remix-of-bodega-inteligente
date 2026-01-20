@@ -16,7 +16,8 @@ const productSchema = z.object({
   code: z.string().min(1, "El código es requerido"),
   name: z.string().min(1, "El nombre es requerido"),
   description: z.string().optional(),
-  price_usd: z.coerce.number().min(0, "El precio debe ser mayor o igual a 0"),
+  purchase_price: z.coerce.number().min(0, "El precio debe ser mayor o igual a 0"),
+  sale_price: z.coerce.number().min(0, "El precio debe ser mayor o igual a 0"),
   stock: z.coerce.number().min(0, "El stock debe ser mayor o igual a 0"),
   unit: z.string().min(1, "La unidad es requerida"),
   low_stock_threshold: z.coerce.number().min(0, "El umbral debe ser mayor o igual a 0"),
@@ -43,7 +44,8 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
       code: "",
       name: "",
       description: "",
-      price_usd: 0,
+      purchase_price: 0,
+      sale_price: 0,
       stock: 0,
       unit: "unidades",
       low_stock_threshold: 5,
@@ -57,7 +59,8 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
         code: product.code,
         name: product.name,
         description: product.description || "",
-        price_usd: product.price_usd,
+        purchase_price: product.purchase_price,
+        sale_price: product.sale_price,
         stock: product.stock,
         unit: product.unit,
         low_stock_threshold: product.low_stock_threshold,
@@ -68,7 +71,8 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
         code: "",
         name: "",
         description: "",
-        price_usd: 0,
+        purchase_price: 0,
+        sale_price: 0,
         stock: 0,
         unit: "unidades",
         low_stock_threshold: 5,
@@ -215,13 +219,13 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
               )}
             />
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="price_usd"
+                name="purchase_price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Precio (USD) *</FormLabel>
+                    <FormLabel>Precio Compra (USD) *</FormLabel>
                     <FormControl>
                       <Input 
                         type="number" 
@@ -238,6 +242,28 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
 
               <FormField
                 control={form.control}
+                name="sale_price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Precio Venta (USD) *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        min="0" 
+                        placeholder="0.00" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
                 name="stock"
                 render={({ field }) => (
                   <FormItem>
@@ -249,7 +275,6 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
                         min="0" 
                         placeholder="0" 
                         {...field} 
-                        disabled={isEditing}
                       />
                     </FormControl>
                     <FormMessage />

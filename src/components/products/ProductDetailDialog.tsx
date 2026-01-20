@@ -1,0 +1,136 @@
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Product } from "@/types/inventory";
+import { useCurrency } from "@/hooks/useCurrency";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { Package, DollarSign, TrendingUp, TrendingDown, Calendar, Tag } from "lucide-react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+
+interface ProductDetailDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  product: Product | null;
+}
+
+export function ProductDetailDialog({ open, onOpenChange, product }: ProductDetailDialogProps) {
+  const { formatPrice } = useCurrency();
+
+  if (!product) return null;
+
+  const isLowStock = product.stock <= product.low_stock_threshold;
+  const margin = product.sale_price - product.purchase_price;
+  const marginPercent = product.purchase_price > 0 
+    ? ((margin / product.purchase_price) * 100).toFixed(1) 
+    : 0;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px] bg-card mx-4 max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="font-display text-xl flex items-center gap-2">
+            <Package className="w-5 h-5 text-primary" />
+            Detalle del Producto
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Header with name and category */}
+          <div className="p-4 rounded-lg bg-muted/50 border border-border">
+            <h3 className="text-lg font-semibold">{product.name}</h3>
+            {product.category && (
+              <div className="flex items-center gap-2 mt-2">
+                <Tag className="w-4 h-4 text-muted-foreground" />
+                <span 
+                  className="px-2 py-0.5 rounded-full text-xs font-medium"
+                  style={{ 
+                    backgroundColor: `${product.category.color}20`,
+                    color: product.category.color
+                  }}
+                >
+                  {product.category.name}
+                </span>
+              </div>
+            )}
+            {product.description && (
+              <p className="text-sm text-muted-foreground mt-2">{product.description}</p>
+            )}
+          </div>
+
+          {/* Stock Status */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 rounded-lg bg-muted/30 border border-border">
+              <p className="text-xs text-muted-foreground mb-1">Stock Actual</p>
+              <p className="text-2xl font-bold">
+                {Number(product.stock).toFixed(0)}
+                <span className="text-sm font-normal text-muted-foreground ml-1">{product.unit}</span>
+              </p>
+            </div>
+            <div className="p-4 rounded-lg bg-muted/30 border border-border">
+              <p className="text-xs text-muted-foreground mb-1">Estado</p>
+              <Badge className={cn(
+                "mt-1",
+                isLowStock 
+                  ? "bg-destructive/10 text-destructive border-destructive/20" 
+                  : "bg-green-500/10 text-green-600 border-green-500/20"
+              )}>
+                {isLowStock ? "Stock Bajo" : "Stock Normal"}
+              </Badge>
+              <p className="text-xs text-muted-foreground mt-2">
+                Mínimo: {product.low_stock_threshold} {product.unit}
+              </p>
+            </div>
+          </div>
+
+          {/* Prices */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border">
+              <div className="flex items-center gap-2">
+                <TrendingDown className="w-4 h-4 text-amber-500" />
+                <span className="text-sm">Precio de Compra</span>
+              </div>
+              <span className="font-semibold">{formatPrice(product.purchase_price)}</span>
+            </div>
+            
+            <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-primary" />
+                <span className="text-sm">Precio de Venta</span>
+              </div>
+              <span className="font-bold text-primary">{formatPrice(product.sale_price)}</span>
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+              <div className="flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-green-600" />
+                <span className="text-sm">Margen de Ganancia</span>
+              </div>
+              <span className="font-semibold text-green-600">
+                {formatPrice(margin)} ({marginPercent}%)
+              </span>
+            </div>
+          </div>
+
+          {/* Inventory Value */}
+          <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
+            <p className="text-sm text-muted-foreground">Valor en Inventario</p>
+            <p className="text-2xl font-display font-bold text-primary">
+              {formatPrice(product.sale_price * product.stock)}
+            </p>
+          </div>
+
+          {/* Dates */}
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Calendar className="w-3 h-3" />
+            <span>
+              Creado: {format(new Date(product.created_at), "dd MMM yyyy", { locale: es })}
+              {product.updated_at !== product.created_at && (
+                <> · Actualizado: {format(new Date(product.updated_at), "dd MMM yyyy", { locale: es })}</>
+              )}
+            </span>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

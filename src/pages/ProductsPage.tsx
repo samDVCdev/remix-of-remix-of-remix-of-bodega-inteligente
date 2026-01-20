@@ -1,14 +1,16 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Search, Package, Download, FileSpreadsheet, Tag } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Package, Download, FileSpreadsheet, Tag, Eye } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ProductFormDialog } from "@/components/products/ProductFormDialog";
+import { ProductDetailDialog } from "@/components/products/ProductDetailDialog";
 import { CategoryFormDialog } from "@/components/categories/CategoryFormDialog";
 import { useProducts, useDeleteProduct } from "@/hooks/useProducts";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useAuth } from "@/hooks/useAuth";
 import { Product } from "@/types/inventory";
 import { cn } from "@/lib/utils";
 import { exportProductsToExcel, exportProductsToPDF } from "@/lib/exportUtils";
@@ -18,7 +20,10 @@ export default function ProductsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+
+  const { isAdmin } = useAuth();
 
   const { data: products, isLoading } = useProducts();
   const deleteProduct = useDeleteProduct();
@@ -103,7 +108,6 @@ export default function ProductsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="table-header">
-                    <TableHead>Código</TableHead>
                     <TableHead>Nombre</TableHead>
                     <TableHead className="hidden md:table-cell">Categoría</TableHead>
                     <TableHead className="hidden sm:table-cell">Precio</TableHead>
@@ -117,7 +121,6 @@ export default function ProductsPage() {
                     const isLowStock = product.stock <= product.low_stock_threshold;
                     return (
                       <TableRow key={product.id}>
-                        <TableCell className="font-mono text-xs">{product.code}</TableCell>
                         <TableCell className="font-medium max-w-[120px] truncate">{product.name}</TableCell>
                         <TableCell className="hidden md:table-cell">
                           {product.category ? (
@@ -134,15 +137,16 @@ export default function ProductsPage() {
                             <span className="text-muted-foreground text-xs">-</span>
                           )}
                         </TableCell>
-                        <TableCell className="hidden sm:table-cell">{formatPrice(Number(product.price_usd))}</TableCell>
+                        <TableCell className="hidden sm:table-cell">{formatPrice(Number(product.sale_price))}</TableCell>
                         <TableCell>{Number(product.stock).toFixed(0)}</TableCell>
                         <TableCell className="hidden md:table-cell">
                           <span className={cn(isLowStock ? "badge-low-stock" : "badge-in-stock")}>{isLowStock ? "Bajo" : "OK"}</span>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(product)}><Pencil className="w-4 h-4" /></Button>
-                            <Button variant="ghost" size="icon" onClick={() => setDeletingProduct(product)} className="text-destructive hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => setViewingProduct(product)}><Eye className="w-4 h-4" /></Button>
+                            {isAdmin && <Button variant="ghost" size="icon" onClick={() => handleEdit(product)}><Pencil className="w-4 h-4" /></Button>}
+                            {isAdmin && <Button variant="ghost" size="icon" onClick={() => setDeletingProduct(product)} className="text-destructive hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -156,6 +160,7 @@ export default function ProductsPage() {
       </div>
 
       <ProductFormDialog open={isFormOpen} onOpenChange={handleFormClose} product={editingProduct} />
+      <ProductDetailDialog open={!!viewingProduct} onOpenChange={() => setViewingProduct(null)} product={viewingProduct} />
       <CategoryFormDialog open={isCategoryOpen} onOpenChange={setIsCategoryOpen} />
 
       <AlertDialog open={!!deletingProduct} onOpenChange={() => setDeletingProduct(null)}>

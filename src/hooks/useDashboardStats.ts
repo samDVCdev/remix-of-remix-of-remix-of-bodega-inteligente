@@ -35,7 +35,7 @@ export function useDashboardStats() {
       const totalProducts = products?.length || 0;
       
       const totalInventoryValue = products?.reduce(
-        (sum, p) => sum + (Number(p.price_usd) * Number(p.stock)), 
+        (sum, p) => sum + (Number(p.sale_price) * Number(p.stock)), 
         0
       ) || 0;
 

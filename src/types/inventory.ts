@@ -12,7 +12,8 @@ export interface Product {
   code: string;
   name: string;
   description: string | null;
-  price_usd: number;
+  purchase_price: number;
+  sale_price: number;
   stock: number;
   unit: string;
   low_stock_threshold: number;
@@ -33,8 +34,13 @@ export interface InventoryMovement {
   notes: string | null;
   package_type: 'individual' | 'paquete' | 'caja' | 'bulto';
   units_per_package: number;
+  is_credit: boolean;
+  is_paid: boolean;
+  customer_name: string | null;
+  sold_by: string | null;
   created_at: string;
   product?: Product;
+  seller_name?: string;
 }
 
 export interface MultiSaleItem {

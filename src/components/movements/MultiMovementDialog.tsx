@@ -56,10 +56,14 @@ export function MultiMovementDialog({ open, onOpenChange, type }: MultiMovementD
     const newItems = [...items];
     if (field === "product_id") {
       const product = products?.find(p => p.id === value);
+      // Use sale_price for sales (salida), purchase_price for entries (entrada)
+      const price = type === "salida" 
+        ? (product?.sale_price || 0) 
+        : (product?.purchase_price || 0);
       newItems[index] = {
         ...newItems[index],
         product_id: value as string,
-        unit_price: product?.price_usd || 0,
+        unit_price: price,
         product
       };
     } else {

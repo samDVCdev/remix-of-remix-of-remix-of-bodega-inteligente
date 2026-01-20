@@ -5,8 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useProducts } from "@/hooks/useProducts";
 import { useCreateMovement } from "@/hooks/useMovements";
+import { useAuth } from "@/hooks/useAuth";
 import { MultiSaleItem } from "@/types/inventory";
 import { toast } from "sonner";
 
@@ -18,12 +21,15 @@ interface MultiSaleDialogProps {
 export function MultiSaleDialog({ open, onOpenChange }: MultiSaleDialogProps) {
   const { data: products } = useProducts();
   const createMovement = useCreateMovement();
+  const { user } = useAuth();
   
   const [items, setItems] = useState<MultiSaleItem[]>([
     { product_id: "", quantity: 1, unit_price: 0 }
   ]);
   const [saleDate, setSaleDate] = useState(new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState("");
+  const [isCredit, setIsCredit] = useState(false);
+  const [customerName, setCustomerName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const addItem = () => {
@@ -43,7 +49,7 @@ export function MultiSaleDialog({ open, onOpenChange }: MultiSaleDialogProps) {
       newItems[index] = {
         ...newItems[index],
         product_id: value as string,
-        unit_price: product?.price_usd || 0,
+        unit_price: product?.sale_price || 0,
         product
       };
     } else {
@@ -78,6 +84,11 @@ export function MultiSaleDialog({ open, onOpenChange }: MultiSaleDialogProps) {
       return;
     }
 
+    if (isCredit && !customerName.trim()) {
+      toast.error("Ingresa el nombre del cliente para ventas fiadas");
+      return;
+    }
+
     // Check stock for sales
     for (const item of validItems) {
       const product = products?.find(p => p.id === item.product_id);
@@ -97,13 +108,15 @@ export function MultiSaleDialog({ open, onOpenChange }: MultiSaleDialogProps) {
           movement_date: saleDate,
           movement_type: "salida",
           notes: notes || undefined,
+          is_credit: isCredit,
+          customer_name: isCredit ? customerName : undefined,
+          sold_by: user?.id,
         });
       }
       
-      toast.success(`Venta registrada: ${validItems.length} producto(s)`);
+      toast.success(`Venta ${isCredit ? "fiada " : ""}registrada: ${validItems.length} producto(s)`);
       onOpenChange(false);
-      setItems([{ product_id: "", quantity: 1, unit_price: 0 }]);
-      setNotes("");
+      reset();
     } catch (error) {
       toast.error("Error al registrar la venta");
     } finally {
@@ -114,6 +127,8 @@ export function MultiSaleDialog({ open, onOpenChange }: MultiSaleDialogProps) {
   const reset = () => {
     setItems([{ product_id: "", quantity: 1, unit_price: 0 }]);
     setNotes("");
+    setIsCredit(false);
+    setCustomerName("");
   };
 
   return (
@@ -143,6 +158,33 @@ export function MultiSaleDialog({ open, onOpenChange }: MultiSaleDialogProps) {
             />
           </div>
 
+          {/* Credit Sale Toggle */}
+          <div className="p-4 rounded-lg bg-muted/30 border border-border space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="credit-toggle" className="font-medium">Venta Fiada</Label>
+                <p className="text-xs text-muted-foreground">Marcar si el cliente pagará después</p>
+              </div>
+              <Switch
+                id="credit-toggle"
+                checked={isCredit}
+                onCheckedChange={setIsCredit}
+              />
+            </div>
+            
+            {isCredit && (
+              <div>
+                <Label className="text-sm">Nombre del Cliente *</Label>
+                <Input
+                  placeholder="Nombre del cliente"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+            )}
+          </div>
+
           {/* Items */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -169,7 +211,6 @@ export function MultiSaleDialog({ open, onOpenChange }: MultiSaleDialogProps) {
                       <SelectContent className="bg-popover max-h-[200px]">
                         {products?.map((product) => (
                           <SelectItem key={product.id} value={product.id}>
-                            <span className="font-mono text-xs mr-2">{product.code}</span>
                             {product.name}
                             <span className="text-muted-foreground ml-2 text-xs">
                               (Stock: {product.stock})
@@ -280,11 +321,20 @@ export function MultiSaleDialog({ open, onOpenChange }: MultiSaleDialogProps) {
           </div>
 
           {/* Total */}
-          <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
-            <p className="text-sm text-muted-foreground">Total de la Venta:</p>
-            <p className="text-3xl font-display font-bold text-primary">
-              ${getTotal().toFixed(2)}
-            </p>
+          <div className={`p-4 rounded-lg ${isCredit ? 'bg-warning/10 border-warning/20' : 'bg-primary/10 border-primary/20'} border`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total de la Venta:</p>
+                <p className={`text-3xl font-display font-bold ${isCredit ? 'text-warning' : 'text-primary'}`}>
+                  ${getTotal().toFixed(2)}
+                </p>
+              </div>
+              {isCredit && (
+                <span className="px-3 py-1 rounded-full bg-warning/20 text-warning text-sm font-medium">
+                  FIADO
+                </span>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">
               {items.filter(i => i.product_id && i.quantity > 0).length} producto(s)
             </p>
