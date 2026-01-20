@@ -44,39 +44,51 @@ export type Database = {
       inventory_movements: {
         Row: {
           created_at: string
+          customer_name: string | null
           id: string
+          is_credit: boolean
+          is_paid: boolean
           movement_date: string
           movement_type: string
           notes: string | null
           package_type: string | null
           product_id: string
           quantity: number
+          sold_by: string | null
           total_amount: number
           unit_price: number
           units_per_package: number | null
         }
         Insert: {
           created_at?: string
+          customer_name?: string | null
           id?: string
+          is_credit?: boolean
+          is_paid?: boolean
           movement_date?: string
           movement_type: string
           notes?: string | null
           package_type?: string | null
           product_id: string
           quantity: number
+          sold_by?: string | null
           total_amount: number
           unit_price: number
           units_per_package?: number | null
         }
         Update: {
           created_at?: string
+          customer_name?: string | null
           id?: string
+          is_credit?: boolean
+          is_paid?: boolean
           movement_date?: string
           movement_type?: string
           notes?: string | null
           package_type?: string | null
           product_id?: string
           quantity?: number
+          sold_by?: string | null
           total_amount?: number
           unit_price?: number
           units_per_package?: number | null
@@ -100,7 +112,8 @@ export type Database = {
           id: string
           low_stock_threshold: number
           name: string
-          price_usd: number
+          purchase_price: number
+          sale_price: number
           stock: number
           unit: string
           updated_at: string
@@ -113,7 +126,8 @@ export type Database = {
           id?: string
           low_stock_threshold?: number
           name: string
-          price_usd: number
+          purchase_price?: number
+          sale_price: number
           stock?: number
           unit?: string
           updated_at?: string
@@ -126,7 +140,8 @@ export type Database = {
           id?: string
           low_stock_threshold?: number
           name?: string
-          price_usd?: number
+          purchase_price?: number
+          sale_price?: number
           stock?: number
           unit?: string
           updated_at?: string
@@ -141,15 +156,100 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      accounts_receivable: {
+        Row: {
+          created_at: string | null
+          customer_name: string | null
+          id: string | null
+          is_credit: boolean | null
+          is_paid: boolean | null
+          movement_date: string | null
+          movement_type: string | null
+          notes: string | null
+          package_type: string | null
+          product_code: string | null
+          product_id: string | null
+          product_name: string | null
+          quantity: number | null
+          seller_name: string | null
+          sold_by: string | null
+          total_amount: number | null
+          unit_price: number | null
+          units_per_package: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "empleado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -276,6 +376,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "empleado"],
+    },
   },
 } as const
