@@ -7,6 +7,8 @@ import {
   BarChart3,
   Warehouse,
   CreditCard,
+  Users,
+  FileText,
   LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -21,12 +23,14 @@ const adminNavigation = [
   { name: "Ventas", href: "/ventas", icon: ShoppingCart },
   { name: "Cuentas por Cobrar", href: "/cuentas-por-cobrar", icon: CreditCard },
   { name: "Reportes", href: "/reportes", icon: BarChart3 },
+  { name: "Usuarios", href: "/usuarios", icon: Users },
+  { name: "Auditoría", href: "/auditoria", icon: FileText },
 ];
 
 const employeeNavigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Productos", href: "/productos", icon: Package },
   { name: "Ventas", href: "/ventas", icon: ShoppingCart },
+  { name: "Cuentas por Cobrar", href: "/cuentas-por-cobrar", icon: CreditCard },
 ];
 
 interface SidebarProps {
@@ -48,7 +52,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
     )}>
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
-        <Link to="/" className="flex items-center gap-3" onClick={onMobileClose}>
+        <Link to={isAdmin ? "/" : "/productos"} className="flex items-center gap-3" onClick={onMobileClose}>
           <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center">
             <Warehouse className="w-5 h-5 text-sidebar-primary-foreground" />
           </div>
