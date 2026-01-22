@@ -60,26 +60,30 @@ export default function ProductsPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl sm:text-3xl font-display font-bold text-foreground">Productos</h1>
-              <p className="text-muted-foreground text-sm sm:text-base">Gestiona el catálogo de productos</p>
+              <p className="text-muted-foreground text-sm sm:text-base">
+                {isAdmin ? "Gestiona el catálogo de productos" : "Consulta el catálogo de productos"}
+              </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={() => setIsCategoryOpen(true)} className="gap-1">
-                <Tag className="w-4 h-4" />
-                <span className="hidden sm:inline">Categorías</span>
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => products && exportProductsToExcel(products)} disabled={!products?.length} className="gap-1">
-                <FileSpreadsheet className="w-4 h-4" />
-                <span className="hidden sm:inline">Excel</span>
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => products && exportProductsToPDF(products)} disabled={!products?.length} className="gap-1">
-                <Download className="w-4 h-4" />
-                <span className="hidden sm:inline">PDF</span>
-              </Button>
-              <Button onClick={() => setIsFormOpen(true)} className="gap-2">
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Nuevo</span>
-              </Button>
-            </div>
+            {isAdmin && (
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={() => setIsCategoryOpen(true)} className="gap-1">
+                  <Tag className="w-4 h-4" />
+                  <span className="hidden sm:inline">Categorías</span>
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => products && exportProductsToExcel(products)} disabled={!products?.length} className="gap-1">
+                  <FileSpreadsheet className="w-4 h-4" />
+                  <span className="hidden sm:inline">Excel</span>
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => products && exportProductsToPDF(products)} disabled={!products?.length} className="gap-1">
+                  <Download className="w-4 h-4" />
+                  <span className="hidden sm:inline">PDF</span>
+                </Button>
+                <Button onClick={() => setIsFormOpen(true)} className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden sm:inline">Nuevo</span>
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Search */}
@@ -97,7 +101,7 @@ export default function ProductsPage() {
             <div className="p-12 text-center">
               <Package className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
               <p className="text-muted-foreground">{search ? "No se encontraron productos" : "No hay productos"}</p>
-              {!search && (
+              {!search && isAdmin && (
                 <Button onClick={() => setIsFormOpen(true)} className="mt-4 gap-2">
                   <Plus className="w-4 h-4" />Agregar Producto
                 </Button>
@@ -110,9 +114,9 @@ export default function ProductsPage() {
                   <TableRow className="table-header">
                     <TableHead>Nombre</TableHead>
                     <TableHead className="hidden md:table-cell">Categoría</TableHead>
-                    <TableHead className="hidden sm:table-cell">Precio</TableHead>
+                    <TableHead>Precio</TableHead>
                     <TableHead>Stock</TableHead>
-                    <TableHead className="hidden md:table-cell">Estado</TableHead>
+                    {isAdmin && <TableHead className="hidden md:table-cell">Estado</TableHead>}
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -137,11 +141,13 @@ export default function ProductsPage() {
                             <span className="text-muted-foreground text-xs">-</span>
                           )}
                         </TableCell>
-                        <TableCell className="hidden sm:table-cell">{formatPrice(Number(product.sale_price))}</TableCell>
-                        <TableCell>{Number(product.stock).toFixed(0)}</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          <span className={cn(isLowStock ? "badge-low-stock" : "badge-in-stock")}>{isLowStock ? "Bajo" : "OK"}</span>
-                        </TableCell>
+                        <TableCell className="text-sm">{formatPrice(Number(product.sale_price))}</TableCell>
+                        <TableCell className="text-sm">{Number(product.stock).toFixed(0)}</TableCell>
+                        {isAdmin && (
+                          <TableCell className="hidden md:table-cell">
+                            <span className={cn(isLowStock ? "badge-low-stock" : "badge-in-stock")}>{isLowStock ? "Bajo" : "OK"}</span>
+                          </TableCell>
+                        )}
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
                             <Button variant="ghost" size="icon" onClick={() => setViewingProduct(product)}><Eye className="w-4 h-4" /></Button>
@@ -159,9 +165,9 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      <ProductFormDialog open={isFormOpen} onOpenChange={handleFormClose} product={editingProduct} />
+      {isAdmin && <ProductFormDialog open={isFormOpen} onOpenChange={handleFormClose} product={editingProduct} />}
       <ProductDetailDialog open={!!viewingProduct} onOpenChange={() => setViewingProduct(null)} product={viewingProduct} />
-      <CategoryFormDialog open={isCategoryOpen} onOpenChange={setIsCategoryOpen} />
+      {isAdmin && <CategoryFormDialog open={isCategoryOpen} onOpenChange={setIsCategoryOpen} />}
 
       <AlertDialog open={!!deletingProduct} onOpenChange={() => setDeletingProduct(null)}>
         <AlertDialogContent className="bg-card mx-4">

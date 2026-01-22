@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: []
+      }
+      business_status: {
+        Row: {
+          closed_at: string | null
+          id: string
+          is_open: boolean
+          opened_at: string | null
+          opened_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          closed_at?: string | null
+          id?: string
+          is_open?: boolean
+          opened_at?: string | null
+          opened_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          closed_at?: string | null
+          id?: string
+          is_open?: boolean
+          opened_at?: string | null
+          opened_by?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           color: string | null
@@ -43,6 +103,7 @@ export type Database = {
       }
       inventory_movements: {
         Row: {
+          amount_paid: number
           created_at: string
           customer_name: string | null
           id: string
@@ -60,6 +121,7 @@ export type Database = {
           units_per_package: number | null
         }
         Insert: {
+          amount_paid?: number
           created_at?: string
           customer_name?: string | null
           id?: string
@@ -77,6 +139,7 @@ export type Database = {
           units_per_package?: number | null
         }
         Update: {
+          amount_paid?: number
           created_at?: string
           customer_name?: string | null
           id?: string
@@ -205,8 +268,11 @@ export type Database = {
     Views: {
       accounts_receivable: {
         Row: {
+          amount_due: number | null
+          amount_paid: number | null
           created_at: string | null
           customer_name: string | null
+          debt_percentage: number | null
           id: string | null
           is_credit: boolean | null
           is_paid: boolean | null
@@ -246,6 +312,15 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      log_audit_event: {
+        Args: {
+          _action: string
+          _details?: Json
+          _entity_id?: string
+          _entity_type: string
+        }
+        Returns: string
       }
     }
     Enums: {

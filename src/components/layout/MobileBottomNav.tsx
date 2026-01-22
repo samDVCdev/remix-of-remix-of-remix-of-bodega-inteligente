@@ -1,20 +1,62 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, Package, Plus, ArrowDownToLine, BarChart3 } from "lucide-react";
+import { Home, Package, Plus, ShoppingCart, CreditCard, MoreHorizontal, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MultiSaleDialog } from "@/components/sales/MultiSaleDialog";
+import { useAuth } from "@/hooks/useAuth";
+import { useBusinessStatus } from "@/hooks/useBusinessStatus";
+import { toast } from "sonner";
+import { LucideIcon } from "lucide-react";
 
-const navItems = [
-  { name: "Inicio", href: "/", icon: Home },
-  { name: "Productos", href: "/productos", icon: Package },
-  { name: "Venta", href: "#sale", icon: Plus, isCenter: true },
-  { name: "Entradas", href: "/entradas", icon: ArrowDownToLine },
-  { name: "Reportes", href: "/reportes", icon: BarChart3 },
-];
+interface NavItem {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  isCenter?: boolean;
+  isMore?: boolean;
+}
 
 export function MobileBottomNav() {
   const location = useLocation();
   const [isSaleOpen, setIsSaleOpen] = useState(false);
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const { isAdmin } = useAuth();
+  const { data: businessStatus } = useBusinessStatus();
+
+  // Employee nav: Productos, Venta (center), Lista Ventas, Cuentas
+  const employeeNavItems = [
+    { name: "Productos", href: "/productos", icon: Package },
+    { name: "Venta", href: "#sale", icon: Plus, isCenter: true },
+    { name: "Ventas", href: "/ventas", icon: ShoppingCart },
+    { name: "Cuentas", href: "/cuentas-por-cobrar", icon: CreditCard },
+  ];
+
+  // Admin nav: Home, Productos, Venta (center), Ventas, Ver más
+  const adminNavItems: NavItem[] = [
+    { name: "Inicio", href: "/", icon: Home },
+    { name: "Productos", href: "/productos", icon: Package },
+    { name: "Venta", href: "#sale", icon: Plus, isCenter: true },
+    { name: "Ventas", href: "/ventas", icon: ShoppingCart },
+    { name: "Más", href: "#more", icon: MoreHorizontal, isMore: true },
+  ];
+
+  const moreMenuItems = [
+    { name: "Entradas", href: "/entradas" },
+    { name: "Cuentas por Cobrar", href: "/cuentas-por-cobrar" },
+    { name: "Reportes", href: "/reportes" },
+    { name: "Usuarios", href: "/usuarios" },
+    { name: "Auditoría", href: "/auditoria" },
+  ];
+
+  const navItems = isAdmin ? adminNavItems : employeeNavItems;
+
+  const handleSaleClick = () => {
+    if (!isAdmin && businessStatus && !businessStatus.is_open) {
+      toast.error("El negocio está cerrado. No puedes registrar ventas.");
+      return;
+    }
+    setIsSaleOpen(true);
+  };
 
   return (
     <>
@@ -28,7 +70,7 @@ export function MobileBottomNav() {
               return (
                 <button
                   key={item.name}
-                  onClick={() => setIsSaleOpen(true)}
+                  onClick={handleSaleClick}
                   className="flex flex-col items-center justify-center -mt-6"
                 >
                   <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-lg">
@@ -37,6 +79,24 @@ export function MobileBottomNav() {
                   <span className="text-[10px] mt-1 font-medium text-primary">
                     {item.name}
                   </span>
+                </button>
+              );
+            }
+
+            if (item.isMore) {
+              return (
+                <button
+                  key={item.name}
+                  onClick={() => setIsMoreOpen(!isMoreOpen)}
+                  className={cn(
+                    "flex flex-col items-center justify-center gap-1 py-2 px-3 rounded-lg transition-colors",
+                    isMoreOpen
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span className="text-[10px] font-medium">{item.name}</span>
                 </button>
               );
             }
@@ -59,6 +119,46 @@ export function MobileBottomNav() {
           })}
         </div>
       </nav>
+
+      {/* More Menu Overlay */}
+      {isMoreOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 z-40 bg-background/80 backdrop-blur-sm"
+          onClick={() => setIsMoreOpen(false)}
+        >
+          <div 
+            className="absolute bottom-20 left-4 right-4 bg-card rounded-xl border border-border shadow-xl p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-foreground">Más opciones</h3>
+              <button
+                onClick={() => setIsMoreOpen(false)}
+                className="p-1 rounded-full hover:bg-muted"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {moreMenuItems.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  onClick={() => setIsMoreOpen(false)}
+                  className={cn(
+                    "p-3 rounded-lg text-sm font-medium transition-colors",
+                    location.pathname === item.href
+                      ? "bg-primary/10 text-primary"
+                      : "bg-muted/50 text-foreground hover:bg-muted"
+                  )}
+                >
+                  {item.name}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <MultiSaleDialog open={isSaleOpen} onOpenChange={setIsSaleOpen} />
     </>

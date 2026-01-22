@@ -43,21 +43,24 @@ export function StatCard({
   };
 
   return (
-    <div className={cn(variants[variant], "animate-fade-in")}>
-      <div className="flex items-start justify-between">
-        <div className="space-y-2">
+    <div className={cn(variants[variant], "animate-fade-in min-w-0")}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="space-y-1 sm:space-y-2 min-w-0 flex-1">
           <p className={cn(
-            "text-sm font-medium",
+            "text-xs sm:text-sm font-medium truncate",
             variant === "primary" ? "text-primary-foreground/80" : "text-muted-foreground"
           )}>
             {title}
           </p>
-          <p className={cn("text-3xl font-display font-bold", textVariants[variant])}>
+          <p className={cn(
+            "text-lg sm:text-2xl lg:text-3xl font-display font-bold truncate", 
+            textVariants[variant]
+          )}>
             {value}
           </p>
           {subtitle && (
             <p className={cn(
-              "text-sm",
+              "text-xs sm:text-sm truncate",
               variant === "primary" ? "text-primary-foreground/70" : "text-muted-foreground"
             )}>
               {subtitle}
@@ -65,15 +68,15 @@ export function StatCard({
           )}
           {trend && (
             <p className={cn(
-              "text-sm font-medium",
+              "text-xs sm:text-sm font-medium",
               trend.isPositive ? "text-success" : "text-destructive"
             )}>
               {trend.isPositive ? "+" : ""}{trend.value}%
             </p>
           )}
         </div>
-        <div className={cn("p-3 rounded-xl", iconVariants[variant])}>
-          <Icon className="w-6 h-6" />
+        <div className={cn("p-2 sm:p-3 rounded-xl shrink-0", iconVariants[variant])}>
+          <Icon className="w-4 h-4 sm:w-6 sm:h-6" />
         </div>
       </div>
     </div>

@@ -4,17 +4,21 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { LowStockAlert } from "@/components/dashboard/LowStockAlert";
 import { TopProducts } from "@/components/dashboard/TopProducts";
+import { TopDebtors } from "@/components/dashboard/TopDebtors";
 import { ProductsTable } from "@/components/dashboard/ProductsTable";
 import { MultiSaleDialog } from "@/components/sales/MultiSaleDialog";
 import { CurrencyToggle } from "@/components/layout/CurrencyToggle";
+import { BusinessStatusToggle } from "@/components/business/BusinessStatusToggle";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { useProducts } from "@/hooks/useProducts";
+import { useDebtorsSummary } from "@/hooks/useAccountsReceivable";
 import { useCurrency } from "@/hooks/useCurrency";
 import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const { data: stats, isLoading } = useDashboardStats();
   const { data: products, isLoading: productsLoading } = useProducts();
+  const { data: debtors } = useDebtorsSummary();
   const { formatPrice } = useCurrency();
   const [isSaleOpen, setIsSaleOpen] = useState(false);
 
@@ -33,10 +37,14 @@ const Index = () => {
             </div>
             <Button onClick={() => setIsSaleOpen(true)} className="gap-2 flex-1 sm:flex-none">
               <ShoppingCart className="w-4 h-4" />
-              Registrar Venta
+              <span className="hidden sm:inline">Registrar Venta</span>
+              <span className="sm:hidden">Venta</span>
             </Button>
           </div>
         </div>
+
+        {/* Business Status Control */}
+        <BusinessStatusToggle />
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -53,13 +61,13 @@ const Index = () => {
             variant="primary"
           />
           <StatCard
-            title="Ventas del Día"
+            title="Ventas Hoy"
             value={isLoading ? "..." : formatPrice(stats?.todayIncome || 0)}
             icon={TrendingUp}
             variant="success"
           />
           <StatCard
-            title="Compras del Día"
+            title="Compras Hoy"
             value={isLoading ? "..." : formatPrice(stats?.todayExpenses || 0)}
             icon={TrendingDown}
             variant="warning"
@@ -70,9 +78,10 @@ const Index = () => {
         <ProductsTable products={products || []} isLoading={productsLoading} />
 
         {/* Alerts and Top Products */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <LowStockAlert products={stats?.lowStockProducts || []} />
           <TopProducts products={stats?.topSellingProducts || []} />
+          <TopDebtors debtors={debtors || []} />
         </div>
       </div>
 
