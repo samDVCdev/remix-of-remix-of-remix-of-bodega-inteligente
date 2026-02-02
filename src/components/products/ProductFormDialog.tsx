@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -8,9 +8,18 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Product, UNITS } from "@/types/inventory";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Product, UNITS, SALE_TYPES, SaleType } from "@/types/inventory";
 import { useCreateProduct, useUpdateProduct } from "@/hooks/useProducts";
 import { useCategories } from "@/hooks/useCategories";
+import { Package, Scale, Layers, Plus, Trash2 } from "lucide-react";
+import { Label } from "@/components/ui/label";
+
+const variantSchema = z.object({
+  name: z.string().min(1, "Nombre requerido"),
+  price: z.coerce.number().min(0, "Precio debe ser >= 0"),
+  units_count: z.coerce.number().min(1, "Mínimo 1").optional(),
+});
 
 const productSchema = z.object({
   code: z.string().min(1, "El código es requerido"),
@@ -22,6 +31,9 @@ const productSchema = z.object({
   unit: z.string().min(1, "La unidad es requerida"),
   low_stock_threshold: z.coerce.number().min(0, "El umbral debe ser mayor o igual a 0"),
   category_id: z.string().optional(),
+  sale_type: z.enum(['unit', 'weight', 'variants']),
+  price_per_kilo: z.coerce.number().min(0).optional(),
+  variants: z.array(variantSchema).optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -50,8 +62,18 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
       unit: "unidades",
       low_stock_threshold: 5,
       category_id: "",
+      sale_type: "unit",
+      price_per_kilo: 0,
+      variants: [],
     },
   });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "variants",
+  });
+
+  const saleType = form.watch("sale_type");
 
   useEffect(() => {
     if (product) {
@@ -65,6 +87,13 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
         unit: product.unit,
         low_stock_threshold: product.low_stock_threshold,
         category_id: product.category_id || "",
+        sale_type: product.sale_type || "unit",
+        price_per_kilo: product.price_per_kilo || 0,
+        variants: product.variants?.map(v => ({
+          name: v.name,
+          price: v.price,
+          units_count: v.units_count || 1,
+        })) || [],
       });
     } else {
       form.reset({
@@ -77,6 +106,9 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
         unit: "unidades",
         low_stock_threshold: 5,
         category_id: "",
+        sale_type: "unit",
+        price_per_kilo: 0,
+        variants: [],
       });
     }
   }, [product, form]);
@@ -86,6 +118,7 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
       const payload = {
         ...data,
         category_id: data.category_id || null,
+        variants: data.sale_type === 'variants' ? data.variants : undefined,
       };
       
       if (isEditing && product) {
@@ -100,9 +133,17 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
     }
   };
 
+  const getSaleTypeIcon = (type: SaleType) => {
+    switch (type) {
+      case 'weight': return <Scale className="w-5 h-5" />;
+      case 'variants': return <Layers className="w-5 h-5" />;
+      default: return <Package className="w-5 h-5" />;
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] bg-card mx-4 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[550px] bg-card mx-4 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-xl">
             {isEditing ? "Editar Producto" : "Nuevo Producto"}
@@ -111,6 +152,42 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Sale Type Selection */}
+            <FormField
+              control={form.control}
+              name="sale_type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo de Venta *</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      className="grid grid-cols-1 gap-2"
+                    >
+                      {SALE_TYPES.map((type) => (
+                        <div key={type.value} className="flex items-center">
+                          <RadioGroupItem
+                            value={type.value}
+                            id={type.value}
+                            className="peer sr-only"
+                          />
+                          <Label
+                            htmlFor={type.value}
+                            className="flex flex-1 items-center gap-3 rounded-lg border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                          >
+                            {getSaleTypeIcon(type.value as SaleType)}
+                            <span className="font-medium">{type.label}</span>
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -219,13 +296,14 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* Price fields based on sale type */}
+            {saleType === 'weight' ? (
               <FormField
                 control={form.control}
-                name="purchase_price"
+                name="price_per_kilo"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Precio Compra (USD) *</FormLabel>
+                    <FormLabel>Precio por Kilo (USD) *</FormLabel>
                     <FormControl>
                       <Input 
                         type="number" 
@@ -239,27 +317,107 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
                   </FormItem>
                 )}
               />
+            ) : saleType === 'variants' ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Presentaciones / Variantes *</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => append({ name: "", price: 0, units_count: 1 })}
+                    className="gap-1"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Agregar
+                  </Button>
+                </div>
+                
+                {fields.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4 border border-dashed rounded-lg">
+                    Agrega al menos una presentación
+                  </p>
+                )}
 
-              <FormField
-                control={form.control}
-                name="sale_price"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Precio Venta (USD) *</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        step="0.01" 
-                        min="0" 
-                        placeholder="0.00" 
-                        {...field} 
+                {fields.map((field, index) => (
+                  <div key={field.id} className="flex gap-2 items-start p-3 bg-muted/30 rounded-lg border">
+                    <div className="flex-1 space-y-2">
+                      <Input
+                        placeholder="Ej: Unidad, Paquete 6, Caja 12"
+                        {...form.register(`variants.${index}.name`)}
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="Precio"
+                          {...form.register(`variants.${index}.price`)}
+                        />
+                        <Input
+                          type="number"
+                          min="1"
+                          placeholder="Unidades"
+                          {...form.register(`variants.${index}.units_count`)}
+                          className="w-24"
+                        />
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => remove(index)}
+                      className="text-destructive hover:text-destructive shrink-0"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="purchase_price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Precio Compra (USD)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          min="0" 
+                          placeholder="0.00" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="sale_price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Precio Venta (USD) *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          min="0" 
+                          placeholder="0.00" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
@@ -317,7 +475,7 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
               >
                 {createProduct.isPending || updateProduct.isPending 
                   ? "Guardando..." 
-                  : isEditing ? "Actualizar" : "Crear Producto"
+                  : isEditing ? "Actualizar" : "Guardar Producto"
                 }
               </Button>
             </div>

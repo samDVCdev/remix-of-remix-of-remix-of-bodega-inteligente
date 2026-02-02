@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Search, Package, Download, FileSpreadsheet, Tag, Eye } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Package, Download, FileSpreadsheet, Tag, Eye, Scale, Layers } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ProductFormDialog } from "@/components/products/ProductFormDialog";
 import { ProductDetailDialog } from "@/components/products/ProductDetailDialog";
 import { CategoryFormDialog } from "@/components/categories/CategoryFormDialog";
-import { useProducts, useDeleteProduct } from "@/hooks/useProducts";
+import { useProductsWithVariants, useDeleteProduct } from "@/hooks/useProducts";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useAuth } from "@/hooks/useAuth";
 import { Product } from "@/types/inventory";
@@ -25,7 +25,7 @@ export default function ProductsPage() {
 
   const { isAdmin } = useAuth();
 
-  const { data: products, isLoading } = useProducts();
+  const { data: products, isLoading } = useProductsWithVariants();
   const deleteProduct = useDeleteProduct();
   const { formatPrice } = useCurrency();
 
@@ -52,6 +52,51 @@ export default function ProductsPage() {
     setEditingProduct(null);
   };
 
+  const getSaleTypeDisplay = (product: Product) => {
+    switch (product.sale_type) {
+      case 'weight':
+        return (
+          <span className="inline-flex items-center gap-1 text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full">
+            <Scale className="w-3 h-3" />
+            Peso
+          </span>
+        );
+      case 'variants':
+        return (
+          <span className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+            <Layers className="w-3 h-3" />
+            Multi
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+            <Package className="w-3 h-3" />
+            Unidad
+          </span>
+        );
+    }
+  };
+
+  const getPriceDisplay = (product: Product) => {
+    switch (product.sale_type) {
+      case 'weight':
+        return `${formatPrice(product.price_per_kilo || 0)}/kg`;
+      case 'variants':
+        if (product.variants && product.variants.length > 0) {
+          const minPrice = Math.min(...product.variants.map(v => v.price));
+          const maxPrice = Math.max(...product.variants.map(v => v.price));
+          if (minPrice === maxPrice) {
+            return formatPrice(minPrice);
+          }
+          return `${formatPrice(minPrice)} - ${formatPrice(maxPrice)}`;
+        }
+        return 'Multi-precio';
+      default:
+        return formatPrice(product.sale_price);
+    }
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6 animate-fade-in">
@@ -59,7 +104,12 @@ export default function ProductsPage() {
         <div className="flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-display font-bold text-foreground">Productos</h1>
+              <h1 className="text-2xl sm:text-3xl font-display font-bold text-foreground flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Package className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+                </div>
+                Productos
+              </h1>
               <p className="text-muted-foreground text-sm sm:text-base">
                 {isAdmin ? "Gestiona el catálogo de productos" : "Consulta el catálogo de productos"}
               </p>
@@ -113,7 +163,7 @@ export default function ProductsPage() {
                 <TableHeader>
                   <TableRow className="table-header">
                     <TableHead>Nombre</TableHead>
-                    <TableHead className="hidden md:table-cell">Categoría</TableHead>
+                    <TableHead className="hidden sm:table-cell">Tipo</TableHead>
                     <TableHead>Precio</TableHead>
                     <TableHead>Stock</TableHead>
                     {isAdmin && <TableHead className="hidden md:table-cell">Estado</TableHead>}
@@ -125,23 +175,28 @@ export default function ProductsPage() {
                     const isLowStock = product.stock <= product.low_stock_threshold;
                     return (
                       <TableRow key={product.id}>
-                        <TableCell className="font-medium max-w-[120px] truncate">{product.name}</TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          {product.category ? (
-                            <span 
-                              className="px-2 py-0.5 rounded-full text-xs font-medium"
-                              style={{ 
-                                backgroundColor: `${product.category.color}20`,
-                                color: product.category.color
-                              }}
-                            >
-                              {product.category.name}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">-</span>
-                          )}
+                        <TableCell>
+                          <div className="max-w-[120px] sm:max-w-[180px]">
+                            <p className="font-medium truncate">{product.name}</p>
+                            {product.category && (
+                              <span 
+                                className="text-xs px-1.5 py-0.5 rounded"
+                                style={{ 
+                                  backgroundColor: `${product.category.color}15`,
+                                  color: product.category.color
+                                }}
+                              >
+                                {product.category.name}
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
-                        <TableCell className="text-sm">{formatPrice(Number(product.sale_price))}</TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          {getSaleTypeDisplay(product)}
+                        </TableCell>
+                        <TableCell className="text-sm font-medium text-primary">
+                          {getPriceDisplay(product)}
+                        </TableCell>
                         <TableCell className="text-sm">{Number(product.stock).toFixed(0)}</TableCell>
                         {isAdmin && (
                           <TableCell className="hidden md:table-cell">

@@ -3,13 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Warehouse, Mail, Lock } from "lucide-react";
+import { Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import logoKiosko from "@/assets/logo-kiosko.jpeg";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
@@ -45,11 +46,13 @@ export default function AuthPage() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="w-16 h-16 mx-auto rounded-xl bg-primary flex items-center justify-center mb-4">
-            <Warehouse className="w-8 h-8 text-primary-foreground" />
-          </div>
-          <CardTitle className="font-display text-2xl">Bodega B0</CardTitle>
-          <CardDescription>Sistema de Inventario</CardDescription>
+          <img 
+            src={logoKiosko} 
+            alt="Kiosko" 
+            className="w-20 h-20 mx-auto rounded-2xl object-cover mb-4 shadow-lg"
+          />
+          <CardTitle className="font-display text-2xl">Kiosko</CardTitle>
+          <CardDescription>Punto de Venta</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...loginForm}>

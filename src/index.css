@@ -4,39 +4,39 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
 
-/* Design System for B0 Inventory - Venezuelan Warehouse */
+/* Design System for Kiosko - Green Theme */
 
 @layer base {
   :root {
-    /* Background tones - warm slate */
-    --background: 220 20% 97%;
-    --foreground: 220 30% 12%;
+    /* Background tones */
+    --background: 0 0% 98%;
+    --foreground: 150 10% 10%;
 
-    /* Cards - clean white with subtle warmth */
+    /* Cards - clean white */
     --card: 0 0% 100%;
-    --card-foreground: 220 30% 12%;
+    --card-foreground: 150 10% 10%;
 
     /* Popover */
     --popover: 0 0% 100%;
-    --popover-foreground: 220 30% 12%;
+    --popover-foreground: 150 10% 10%;
 
-    /* Primary - Deep professional blue */
-    --primary: 217 91% 35%;
+    /* Primary - Kiosko Green */
+    --primary: 142 76% 36%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary - Soft slate */
-    --secondary: 220 16% 93%;
-    --secondary-foreground: 220 30% 20%;
+    /* Secondary - Light green tint */
+    --secondary: 142 30% 94%;
+    --secondary-foreground: 142 50% 20%;
 
     /* Muted */
-    --muted: 220 16% 93%;
-    --muted-foreground: 220 10% 45%;
+    --muted: 142 20% 94%;
+    --muted-foreground: 142 10% 45%;
 
     /* Accent - Warm amber for highlights */
     --accent: 38 92% 50%;
     --accent-foreground: 38 100% 15%;
 
-    /* Success - Green for positive values */
+    /* Success - Bright green */
     --success: 152 69% 40%;
     --success-foreground: 0 0% 100%;
 
@@ -49,53 +49,53 @@
     --destructive-foreground: 0 0% 100%;
 
     /* Border and inputs */
-    --border: 220 16% 88%;
-    --input: 220 16% 88%;
-    --ring: 217 91% 35%;
+    --border: 142 16% 88%;
+    --input: 142 16% 88%;
+    --ring: 142 76% 36%;
 
     --radius: 0.75rem;
 
-    /* Sidebar */
-    --sidebar-background: 220 30% 12%;
-    --sidebar-foreground: 220 10% 85%;
-    --sidebar-primary: 217 91% 50%;
+    /* Sidebar - Dark green */
+    --sidebar-background: 150 40% 10%;
+    --sidebar-foreground: 142 10% 85%;
+    --sidebar-primary: 142 76% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 30% 18%;
-    --sidebar-accent-foreground: 220 10% 90%;
-    --sidebar-border: 220 30% 20%;
-    --sidebar-ring: 217 91% 50%;
+    --sidebar-accent: 150 40% 16%;
+    --sidebar-accent-foreground: 142 10% 90%;
+    --sidebar-border: 150 40% 18%;
+    --sidebar-ring: 142 76% 50%;
 
     /* Custom gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 35%) 0%, hsl(217 91% 45%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(142 76% 45%) 100%);
     --gradient-accent: linear-gradient(135deg, hsl(38 92% 50%) 0%, hsl(25 95% 53%) 100%);
     --gradient-success: linear-gradient(135deg, hsl(152 69% 40%) 0%, hsl(152 69% 50%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(220 20% 98%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(142 20% 98%) 100%);
 
     /* Shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(220 30% 12% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(220 30% 12% / 0.1), 0 2px 4px -2px hsl(220 30% 12% / 0.1);
-    --shadow-lg: 0 10px 15px -3px hsl(220 30% 12% / 0.1), 0 4px 6px -4px hsl(220 30% 12% / 0.1);
-    --shadow-card: 0 1px 3px 0 hsl(220 30% 12% / 0.08), 0 1px 2px -1px hsl(220 30% 12% / 0.08);
+    --shadow-sm: 0 1px 2px 0 hsl(150 10% 10% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(150 10% 10% / 0.1), 0 2px 4px -2px hsl(150 10% 10% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(150 10% 10% / 0.1), 0 4px 6px -4px hsl(150 10% 10% / 0.1);
+    --shadow-card: 0 1px 3px 0 hsl(150 10% 10% / 0.08), 0 1px 2px -1px hsl(150 10% 10% / 0.08);
   }
 
   .dark {
-    --background: 220 30% 8%;
-    --foreground: 220 10% 95%;
+    --background: 150 30% 6%;
+    --foreground: 142 10% 95%;
 
-    --card: 220 30% 12%;
-    --card-foreground: 220 10% 95%;
+    --card: 150 30% 10%;
+    --card-foreground: 142 10% 95%;
 
-    --popover: 220 30% 12%;
-    --popover-foreground: 220 10% 95%;
+    --popover: 150 30% 10%;
+    --popover-foreground: 142 10% 95%;
 
-    --primary: 217 91% 55%;
+    --primary: 142 76% 45%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 30% 18%;
-    --secondary-foreground: 220 10% 90%;
+    --secondary: 150 30% 16%;
+    --secondary-foreground: 142 10% 90%;
 
-    --muted: 220 30% 18%;
-    --muted-foreground: 220 10% 55%;
+    --muted: 150 30% 16%;
+    --muted-foreground: 142 10% 55%;
 
     --accent: 38 92% 55%;
     --accent-foreground: 38 100% 10%;
@@ -109,18 +109,18 @@
     --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 30% 22%;
-    --input: 220 30% 22%;
-    --ring: 217 91% 55%;
+    --border: 150 30% 20%;
+    --input: 150 30% 20%;
+    --ring: 142 76% 45%;
 
-    --sidebar-background: 220 30% 6%;
-    --sidebar-foreground: 220 10% 85%;
-    --sidebar-primary: 217 91% 55%;
+    --sidebar-background: 150 30% 4%;
+    --sidebar-foreground: 142 10% 85%;
+    --sidebar-primary: 142 76% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 30% 12%;
-    --sidebar-accent-foreground: 220 10% 90%;
-    --sidebar-border: 220 30% 15%;
-    --sidebar-ring: 217 91% 55%;
+    --sidebar-accent: 150 30% 10%;
+    --sidebar-accent-foreground: 142 10% 90%;
+    --sidebar-border: 150 30% 12%;
+    --sidebar-ring: 142 76% 50%;
   }
 }
 
@@ -141,12 +141,12 @@
 
 @layer components {
   .stat-card {
-    @apply bg-card rounded-xl p-6 border border-border;
+    @apply bg-card rounded-xl p-4 sm:p-6 border border-border;
     box-shadow: var(--shadow-card);
   }
 
   .stat-card-accent {
-    @apply bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-xl p-6;
+    @apply bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-xl p-4 sm:p-6;
     box-shadow: var(--shadow-lg);
   }
 
@@ -168,6 +168,31 @@
 
   .badge-in-stock {
     @apply bg-success/15 text-success border border-success/30 px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  /* Touch-friendly product card */
+  .product-card {
+    @apply bg-card rounded-xl p-4 border border-border flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 active:scale-95;
+    box-shadow: var(--shadow-card);
+    min-height: 140px;
+  }
+
+  .product-card:hover {
+    @apply border-primary/50 shadow-md;
+  }
+
+  .product-card:active {
+    @apply border-primary bg-primary/5;
+  }
+
+  /* Cart panel */
+  .cart-panel {
+    @apply bg-card border-l border-border h-full flex flex-col;
+  }
+
+  /* Touch button */
+  .touch-button {
+    @apply h-14 text-lg font-semibold rounded-xl transition-all duration-200 active:scale-95;
   }
 }
 
@@ -209,5 +234,10 @@
       opacity: 1;
       transform: scale(1);
     }
+  }
+
+  /* Responsive number display */
+  .responsive-number {
+    @apply text-xl sm:text-2xl md:text-3xl font-bold truncate;
   }
 }

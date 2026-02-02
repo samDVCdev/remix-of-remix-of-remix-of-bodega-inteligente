@@ -3,7 +3,7 @@ import { Product } from "@/types/inventory";
 import { useCurrency } from "@/hooks/useCurrency";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Package, DollarSign, TrendingUp, TrendingDown, Calendar, Tag } from "lucide-react";
+import { Package, DollarSign, TrendingUp, TrendingDown, Calendar, Tag, Scale, Layers } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -24,6 +24,20 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
     ? ((margin / product.purchase_price) * 100).toFixed(1) 
     : 0;
 
+  const getSaleTypeInfo = () => {
+    switch (product.sale_type) {
+      case 'weight':
+        return { icon: Scale, label: 'Por Peso (Gramera)', color: 'text-accent' };
+      case 'variants':
+        return { icon: Layers, label: 'Múltiples Presentaciones', color: 'text-primary' };
+      default:
+        return { icon: Package, label: 'Por Unidad', color: 'text-muted-foreground' };
+    }
+  };
+
+  const saleTypeInfo = getSaleTypeInfo();
+  const SaleTypeIcon = saleTypeInfo.icon;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px] bg-card mx-4 max-h-[90vh] overflow-y-auto">
@@ -38,20 +52,24 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
           {/* Header with name and category */}
           <div className="p-4 rounded-lg bg-muted/50 border border-border">
             <h3 className="text-lg font-semibold">{product.name}</h3>
-            {product.category && (
-              <div className="flex items-center gap-2 mt-2">
-                <Tag className="w-4 h-4 text-muted-foreground" />
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              {product.category && (
                 <span 
-                  className="px-2 py-0.5 rounded-full text-xs font-medium"
+                  className="px-2 py-0.5 rounded-full text-xs font-medium inline-flex items-center gap-1"
                   style={{ 
                     backgroundColor: `${product.category.color}20`,
                     color: product.category.color
                   }}
                 >
+                  <Tag className="w-3 h-3" />
                   {product.category.name}
                 </span>
-              </div>
-            )}
+              )}
+              <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium inline-flex items-center gap-1 bg-muted", saleTypeInfo.color)}>
+                <SaleTypeIcon className="w-3 h-3" />
+                {saleTypeInfo.label}
+              </span>
+            </div>
             {product.description && (
               <p className="text-sm text-muted-foreground mt-2">{product.description}</p>
             )}
@@ -72,7 +90,7 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
                 "mt-1",
                 isLowStock 
                   ? "bg-destructive/10 text-destructive border-destructive/20" 
-                  : "bg-green-500/10 text-green-600 border-green-500/20"
+                  : "bg-primary/10 text-primary border-primary/20"
               )}>
                 {isLowStock ? "Stock Bajo" : "Stock Normal"}
               </Badge>
@@ -82,33 +100,58 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
             </div>
           </div>
 
-          {/* Prices */}
+          {/* Prices based on sale type */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border">
-              <div className="flex items-center gap-2">
-                <TrendingDown className="w-4 h-4 text-amber-500" />
-                <span className="text-sm">Precio de Compra</span>
+            {product.sale_type === 'weight' ? (
+              <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20">
+                <div className="flex items-center gap-2">
+                  <Scale className="w-4 h-4 text-primary" />
+                  <span className="text-sm">Precio por Kilo</span>
+                </div>
+                <span className="font-bold text-primary">{formatPrice(product.price_per_kilo || 0)}</span>
               </div>
-              <span className="font-semibold">{formatPrice(product.purchase_price)}</span>
-            </div>
-            
-            <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-primary" />
-                <span className="text-sm">Precio de Venta</span>
+            ) : product.sale_type === 'variants' && product.variants ? (
+              <div className="p-3 rounded-lg bg-muted/30 border border-border space-y-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <Layers className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium">Presentaciones</span>
+                </div>
+                {product.variants.map((variant) => (
+                  <div key={variant.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                    <span className="text-sm">{variant.name}</span>
+                    <span className="font-semibold text-primary">{formatPrice(variant.price)}</span>
+                  </div>
+                ))}
               </div>
-              <span className="font-bold text-primary">{formatPrice(product.sale_price)}</span>
-            </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border">
+                  <div className="flex items-center gap-2">
+                    <TrendingDown className="w-4 h-4 text-amber-500" />
+                    <span className="text-sm">Precio de Compra</span>
+                  </div>
+                  <span className="font-semibold">{formatPrice(product.purchase_price)}</span>
+                </div>
+                
+                <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-primary" />
+                    <span className="text-sm">Precio de Venta</span>
+                  </div>
+                  <span className="font-bold text-primary">{formatPrice(product.sale_price)}</span>
+                </div>
 
-            <div className="flex items-center justify-between p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-              <div className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-green-600" />
-                <span className="text-sm">Margen de Ganancia</span>
-              </div>
-              <span className="font-semibold text-green-600">
-                {formatPrice(margin)} ({marginPercent}%)
-              </span>
-            </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-success/10 border border-success/20">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-success" />
+                    <span className="text-sm">Margen de Ganancia</span>
+                  </div>
+                  <span className="font-semibold text-success">
+                    {formatPrice(margin)} ({marginPercent}%)
+                  </span>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Inventory Value */}
@@ -124,9 +167,9 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
             <Calendar className="w-3 h-3" />
             <span>
               Creado: {format(new Date(product.created_at), "dd MMM yyyy", { locale: es })}
-              {product.updated_at !== product.created_at && (
+              {product.updated_at !== product.created_at ? (
                 <> · Actualizado: {format(new Date(product.updated_at), "dd MMM yyyy", { locale: es })}</>
-              )}
+              ) : null}
             </span>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Package, DollarSign, TrendingUp, TrendingDown, ShoppingCart } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -6,7 +6,6 @@ import { LowStockAlert } from "@/components/dashboard/LowStockAlert";
 import { TopProducts } from "@/components/dashboard/TopProducts";
 import { TopDebtors } from "@/components/dashboard/TopDebtors";
 import { ProductsTable } from "@/components/dashboard/ProductsTable";
-import { MultiSaleDialog } from "@/components/sales/MultiSaleDialog";
 import { CurrencyToggle } from "@/components/layout/CurrencyToggle";
 import { BusinessStatusToggle } from "@/components/business/BusinessStatusToggle";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
@@ -16,11 +15,11 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { Button } from "@/components/ui/button";
 
 const Index = () => {
+  const navigate = useNavigate();
   const { data: stats, isLoading } = useDashboardStats();
   const { data: products, isLoading: productsLoading } = useProducts();
   const { data: debtors } = useDebtorsSummary();
   const { formatPrice } = useCurrency();
-  const [isSaleOpen, setIsSaleOpen] = useState(false);
 
   return (
     <MainLayout>
@@ -29,16 +28,16 @@ const Index = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-display font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground text-sm sm:text-base">Resumen del inventario de tu bodega</p>
+            <p className="text-muted-foreground text-sm sm:text-base">Resumen del punto de venta</p>
           </div>
           <div className="flex items-center gap-2">
             <div className="lg:hidden">
               <CurrencyToggle />
             </div>
-            <Button onClick={() => setIsSaleOpen(true)} className="gap-2 flex-1 sm:flex-none">
+            <Button onClick={() => navigate("/pos")} className="gap-2 flex-1 sm:flex-none">
               <ShoppingCart className="w-4 h-4" />
-              <span className="hidden sm:inline">Registrar Venta</span>
-              <span className="sm:hidden">Venta</span>
+              <span className="hidden sm:inline">Ir a Punto de Venta</span>
+              <span className="sm:hidden">Vender</span>
             </Button>
           </div>
         </div>
@@ -84,8 +83,6 @@ const Index = () => {
           <TopDebtors debtors={debtors || []} />
         </div>
       </div>
-
-      <MultiSaleDialog open={isSaleOpen} onOpenChange={setIsSaleOpen} />
     </MainLayout>
   );
 };

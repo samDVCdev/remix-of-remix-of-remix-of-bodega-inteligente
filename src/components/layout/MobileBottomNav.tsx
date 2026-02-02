@@ -1,11 +1,8 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Home, Package, Plus, ShoppingCart, CreditCard, MoreHorizontal, X } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Package, ShoppingCart, CreditCard, MoreHorizontal, X, LayoutDashboard, List } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { MultiSaleDialog } from "@/components/sales/MultiSaleDialog";
 import { useAuth } from "@/hooks/useAuth";
-import { useBusinessStatus } from "@/hooks/useBusinessStatus";
-import { toast } from "sonner";
 import { LucideIcon } from "lucide-react";
 
 interface NavItem {
@@ -18,29 +15,29 @@ interface NavItem {
 
 export function MobileBottomNav() {
   const location = useLocation();
-  const [isSaleOpen, setIsSaleOpen] = useState(false);
+  const navigate = useNavigate();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const { isAdmin } = useAuth();
-  const { data: businessStatus } = useBusinessStatus();
 
-  // Employee nav: Productos, Venta (center), Lista Ventas, Cuentas
-  const employeeNavItems = [
+  // Employee nav: Productos, POS (center), Ventas, Cuentas
+  const employeeNavItems: NavItem[] = [
     { name: "Productos", href: "/productos", icon: Package },
-    { name: "Venta", href: "#sale", icon: Plus, isCenter: true },
-    { name: "Ventas", href: "/ventas", icon: ShoppingCart },
+    { name: "Vender", href: "/pos", icon: ShoppingCart, isCenter: true },
+    { name: "Ventas", href: "/ventas", icon: List },
     { name: "Cuentas", href: "/cuentas-por-cobrar", icon: CreditCard },
   ];
 
-  // Admin nav: Home, Productos, Venta (center), Ventas, Ver más
+  // Admin nav: Dashboard, Productos, POS (center), Ventas, Más
   const adminNavItems: NavItem[] = [
-    { name: "Inicio", href: "/", icon: Home },
+    { name: "Inicio", href: "/", icon: LayoutDashboard },
     { name: "Productos", href: "/productos", icon: Package },
-    { name: "Venta", href: "#sale", icon: Plus, isCenter: true },
-    { name: "Ventas", href: "/ventas", icon: ShoppingCart },
+    { name: "Vender", href: "/pos", icon: ShoppingCart, isCenter: true },
+    { name: "Ventas", href: "/ventas", icon: List },
     { name: "Más", href: "#more", icon: MoreHorizontal, isMore: true },
   ];
 
   const moreMenuItems = [
+    { name: "Categorías", href: "/categorias" },
     { name: "Entradas", href: "/entradas" },
     { name: "Cuentas por Cobrar", href: "/cuentas-por-cobrar" },
     { name: "Reportes", href: "/reportes" },
@@ -50,12 +47,8 @@ export function MobileBottomNav() {
 
   const navItems = isAdmin ? adminNavItems : employeeNavItems;
 
-  const handleSaleClick = () => {
-    if (!isAdmin && businessStatus && !businessStatus.is_open) {
-      toast.error("El negocio está cerrado. No puedes registrar ventas.");
-      return;
-    }
-    setIsSaleOpen(true);
+  const handleCenterClick = () => {
+    navigate("/pos");
   };
 
   return (
@@ -70,10 +63,15 @@ export function MobileBottomNav() {
               return (
                 <button
                   key={item.name}
-                  onClick={handleSaleClick}
+                  onClick={handleCenterClick}
                   className="flex flex-col items-center justify-center -mt-6"
                 >
-                  <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-lg">
+                  <div className={cn(
+                    "w-14 h-14 rounded-full flex items-center justify-center shadow-lg",
+                    location.pathname === "/pos" 
+                      ? "bg-primary ring-4 ring-primary/20" 
+                      : "bg-primary"
+                  )}>
                     <Icon className="w-7 h-7 text-primary-foreground" />
                   </div>
                   <span className="text-[10px] mt-1 font-medium text-primary">
@@ -159,8 +157,6 @@ export function MobileBottomNav() {
           </div>
         </div>
       )}
-
-      <MultiSaleDialog open={isSaleOpen} onOpenChange={setIsSaleOpen} />
     </>
   );
 }
