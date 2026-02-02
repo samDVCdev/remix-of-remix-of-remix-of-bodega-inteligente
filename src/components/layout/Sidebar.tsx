@@ -5,22 +5,25 @@ import {
   ArrowDownToLine, 
   ShoppingCart,
   BarChart3,
-  Warehouse,
   CreditCard,
   Users,
   FileText,
-  LogOut
+  LogOut,
+  Tags
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CurrencyToggle } from "./CurrencyToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import logoKiosko from "@/assets/logo-kiosko.jpeg";
 
 const adminNavigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Punto de Venta", href: "/pos", icon: ShoppingCart },
   { name: "Productos", href: "/productos", icon: Package },
+  { name: "Categorías", href: "/categorias", icon: Tags },
   { name: "Entradas", href: "/entradas", icon: ArrowDownToLine },
-  { name: "Ventas", href: "/ventas", icon: ShoppingCart },
+  { name: "Historial Ventas", href: "/ventas", icon: ShoppingCart },
   { name: "Cuentas por Cobrar", href: "/cuentas-por-cobrar", icon: CreditCard },
   { name: "Reportes", href: "/reportes", icon: BarChart3 },
   { name: "Usuarios", href: "/usuarios", icon: Users },
@@ -28,8 +31,9 @@ const adminNavigation = [
 ];
 
 const employeeNavigation = [
+  { name: "Punto de Venta", href: "/pos", icon: ShoppingCart },
   { name: "Productos", href: "/productos", icon: Package },
-  { name: "Ventas", href: "/ventas", icon: ShoppingCart },
+  { name: "Historial Ventas", href: "/ventas", icon: ShoppingCart },
   { name: "Cuentas por Cobrar", href: "/cuentas-por-cobrar", icon: CreditCard },
 ];
 
@@ -52,21 +56,23 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
     )}>
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
-        <Link to={isAdmin ? "/" : "/productos"} className="flex items-center gap-3" onClick={onMobileClose}>
-          <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center">
-            <Warehouse className="w-5 h-5 text-sidebar-primary-foreground" />
-          </div>
+        <Link to={isAdmin ? "/" : "/pos"} className="flex items-center gap-3" onClick={onMobileClose}>
+          <img 
+            src={logoKiosko} 
+            alt="Kiosko" 
+            className="w-12 h-12 rounded-xl object-cover"
+          />
           <div>
-            <h1 className="font-display text-xl font-bold text-sidebar-foreground">B0</h1>
+            <h1 className="font-display text-xl font-bold text-sidebar-foreground">Kiosko</h1>
             <p className="text-xs text-sidebar-foreground/60">
-              {profile?.full_name || "Sistema de Inventario"}
+              {profile?.full_name || "Punto de Venta"}
             </p>
           </div>
         </Link>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {navigation.map((item) => {
           const isActive = location.pathname === item.href;
           return (
@@ -100,7 +106,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
           Cerrar Sesión
         </Button>
         <p className="text-xs text-sidebar-foreground/50 text-center">
-          {isAdmin ? "Administrador" : "Empleado"} · B0 © 2024
+          {isAdmin ? "Administrador" : "Empleado"} · Kiosko © 2024
         </p>
       </div>
     </aside>
