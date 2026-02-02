@@ -52,7 +52,7 @@ export default function AuthPage() {
             className="w-32 h-32 mx-auto rounded-2xl object-cover mb-4"
           />
           <CardTitle className="font-display text-2xl">Kiosko</CardTitle>
-          <CardDescription>Punto de Venta</CardDescription>
+          <CardDescription>Tu inventario de confianza</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...loginForm}>
