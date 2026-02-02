@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import logoKiosko from "@/assets/logo-kiosko.jpeg";
+import logoKiosko from "@/assets/logo-kiosko.png";
 
 const loginSchema = z.object({
   email: z.string().email("Email inválido"),
@@ -49,7 +49,7 @@ export default function AuthPage() {
           <img 
             src={logoKiosko} 
             alt="Kiosko" 
-            className="w-20 h-20 mx-auto rounded-2xl object-cover mb-4 shadow-lg"
+            className="w-32 h-32 mx-auto rounded-2xl object-cover mb-4"
           />
           <CardTitle className="font-display text-2xl">Kiosko</CardTitle>
           <CardDescription>Punto de Venta</CardDescription>

@@ -241,3 +241,10 @@
     @apply text-xl sm:text-2xl md:text-3xl font-bold truncate;
   }
 }
+
+@media screen and (max-width: 600px) {
+  div[role="dialog"] {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+}

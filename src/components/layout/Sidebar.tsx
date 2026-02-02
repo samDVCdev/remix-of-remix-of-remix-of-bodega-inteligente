@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { CurrencyToggle } from "./CurrencyToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import logoKiosko from "@/assets/logo-kiosko.jpeg";
+import logoKiosko from "@/assets/logo-kiosko.png";
 
 const adminNavigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },

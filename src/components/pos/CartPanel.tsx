@@ -30,16 +30,23 @@ export function CartPanel({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 lg:relative lg:inset-auto">
-      {/* Backdrop for mobile */}
-      <div 
-        className="absolute inset-0 bg-black/50 lg:hidden"
-        onClick={onClose}
-      />
+<div className={`
+    fixed inset-0 z-50 
+    ${isOpen ? 'block' : 'hidden'} 
+  `}>
+    {/* Backdrop: Solo visible en móvil */}
+    <div 
+      className="absolute inset-0 bg-black/50"
+      onClick={onClose}
+    />
 
-      {/* Panel */}
-      <div className="absolute right-0 top-0 bottom-0 w-full max-w-md bg-card border-l border-border flex flex-col animate-slide-up lg:animate-none">
-        {/* Header */}
+    {/* Panel: En PC quitamos el 'absolute' para que respete el flujo */}
+    <div className="
+      absolute right-0 top-0 bottom-0 
+      w-full max-w-md bg-card border-l border-border 
+      flex flex-col 
+      animate-slide-up 
+    ">
         <div className="flex items-center justify-between p-4 border-b border-border bg-muted/30">
           <div className="flex items-center gap-2">
             <ShoppingCart className="w-5 h-5 text-primary" />

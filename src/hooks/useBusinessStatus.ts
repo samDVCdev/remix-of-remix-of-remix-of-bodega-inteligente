@@ -19,7 +19,7 @@ export function useBusinessStatus() {
         .from("business_status" as any)
         .select("*")
         .single();
-      
+
       if (error) throw error;
       return data as unknown as BusinessStatus;
     },
@@ -32,25 +32,34 @@ export function useToggleBusinessStatus() {
   return useMutation({
     mutationFn: async ({ isOpen }: { isOpen: boolean }) => {
       const { data: { user } } = await supabase.auth.getUser();
-      
-      const updateData = isOpen 
-        ? { 
-            is_open: true, 
-            opened_at: new Date().toISOString(), 
-            opened_by: user?.id,
-            closed_at: null 
-          }
-        : { 
-            is_open: false, 
-            closed_at: new Date().toISOString() 
-          };
+
+      const updateData = isOpen
+        ? {
+          is_open: true,
+          opened_at: new Date().toISOString(),
+          opened_by: user?.id,
+          closed_at: null
+        }
+        : {
+          is_open: false,
+          closed_at: new Date().toISOString()
+        };
+
+      const { data: firstRow } = await supabase
+        .from("business_status")
+        .select("id")
+        .limit(1)
+        .single();
+
+      if (!firstRow) throw new Error("No se encontró el registro de estado");
 
       const { data, error } = await supabase
-        .from("business_status" as any)
+        .from("business_status")
         .update(updateData)
+        .eq("id", firstRow.id) 
         .select()
         .single();
-      
+
       if (error) throw error;
 
       // Log audit event using direct insert
