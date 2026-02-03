@@ -7,6 +7,7 @@ interface UserWithRole {
   user_id: string;
   full_name: string | null;
   created_at: string;
+  is_active: boolean;
   role: "admin" | "empleado";
 }
 
@@ -34,6 +35,7 @@ export function useUsers() {
           user_id: profile.user_id,
           full_name: profile.full_name,
           created_at: profile.created_at,
+          is_active: (profile as any).is_active ?? true,
           role: (userRole?.role as "admin" | "empleado") || "empleado",
         };
       });
@@ -94,6 +96,39 @@ export function useUpdateUserName() {
     },
     onError: () => {
       toast.error("Error al actualizar el nombre");
+    },
+  });
+}
+
+export function useToggleUserStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ userId, isActive }: { userId: string; isActive: boolean }) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ is_active: isActive } as any)
+        .eq("user_id", userId);
+      
+      if (error) throw error;
+
+      // Log audit event
+      const { data: { user } } = await supabase.auth.getUser();
+      await supabase
+        .from("audit_logs" as any)
+        .insert({
+          action: isActive ? 'USER_ACTIVATED' : 'USER_DEACTIVATED',
+          entity_type: 'profiles',
+          user_id: user?.id,
+          details: { target_user_id: userId }
+        });
+    },
+    onSuccess: (_, { isActive }) => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast.success(isActive ? "Usuario activado" : "Usuario desactivado");
+    },
+    onError: () => {
+      toast.error("Error al cambiar el estado del usuario");
     },
   });
 }

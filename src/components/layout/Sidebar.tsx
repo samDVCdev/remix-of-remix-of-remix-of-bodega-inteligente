@@ -8,8 +8,7 @@ import {
   CreditCard,
   Users,
   FileText,
-  LogOut,
-  Tags
+  LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CurrencyToggle } from "./CurrencyToggle";
@@ -21,7 +20,6 @@ const adminNavigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Punto de Venta", href: "/pos", icon: ShoppingCart },
   { name: "Productos", href: "/productos", icon: Package },
-  { name: "Categorías", href: "/categorias", icon: Tags },
   { name: "Entradas", href: "/entradas", icon: ArrowDownToLine },
   { name: "Historial Ventas", href: "/ventas", icon: ShoppingCart },
   { name: "Cuentas por Cobrar", href: "/cuentas-por-cobrar", icon: CreditCard },

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Search, Package, Download, FileSpreadsheet, Tag, Eye, Scale, Layers } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Package, Download, FileSpreadsheet, Eye, Scale, Layers } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ProductFormDialog } from "@/components/products/ProductFormDialog";
 import { ProductDetailDialog } from "@/components/products/ProductDetailDialog";
-import { CategoryFormDialog } from "@/components/categories/CategoryFormDialog";
 import { useProductsWithVariants, useDeleteProduct } from "@/hooks/useProducts";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,7 +17,6 @@ import { exportProductsToExcel, exportProductsToPDF } from "@/lib/exportUtils";
 export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
@@ -27,7 +25,7 @@ export default function ProductsPage() {
 
   const { data: products, isLoading } = useProductsWithVariants();
   const deleteProduct = useDeleteProduct();
-  const { formatPrice } = useCurrency();
+  const { formatPrice, exchangeRate } = useCurrency();
 
   const filteredProducts = products?.filter(
     (p) =>
@@ -81,20 +79,46 @@ export default function ProductsPage() {
   const getPriceDisplay = (product: Product) => {
     switch (product.sale_type) {
       case 'weight':
-        return `${formatPrice(product.price_per_kilo || 0)}/kg`;
+        const pricePerKilo = product.price_per_kilo || 0;
+        return (
+          <div>
+            <p>${pricePerKilo.toFixed(2)}/kg</p>
+            <p className="text-xs text-muted-foreground">Bs. {(pricePerKilo * exchangeRate).toFixed(2)}</p>
+          </div>
+        );
       case 'variants':
         if (product.variants && product.variants.length > 0) {
           const minPrice = Math.min(...product.variants.map(v => v.price));
-          const maxPrice = Math.max(...product.variants.map(v => v.price));
-          if (minPrice === maxPrice) {
-            return formatPrice(minPrice);
-          }
-          return `${formatPrice(minPrice)} - ${formatPrice(maxPrice)}`;
+          return (
+            <div>
+              <p>Desde ${minPrice.toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground">Bs. {(minPrice * exchangeRate).toFixed(2)}</p>
+            </div>
+          );
         }
         return 'Multi-precio';
       default:
-        return formatPrice(product.sale_price);
+        return (
+          <div>
+            <p>${product.sale_price.toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground">Bs. {(product.sale_price * exchangeRate).toFixed(2)}</p>
+          </div>
+        );
     }
+  };
+
+  const getReadableStock = (product: Product) => {
+    if (product.base_unit === 'gramo') {
+      const kilos = Math.floor(product.stock_base_units / 1000);
+      const gramos = Math.round(product.stock_base_units % 1000);
+      if (kilos > 0 && gramos > 0) {
+        return `${kilos}kg ${gramos}g`;
+      } else if (kilos > 0) {
+        return `${kilos}kg`;
+      }
+      return `${gramos}g`;
+    }
+    return `${Math.round(product.stock_base_units)} ${product.base_unit}s`;
   };
 
   return (
@@ -116,15 +140,11 @@ export default function ProductsPage() {
             </div>
             {isAdmin && (
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={() => setIsCategoryOpen(true)} className="gap-1">
-                  <Tag className="w-4 h-4" />
-                  <span className="hidden sm:inline">Categorías</span>
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => products && exportProductsToExcel(products)} disabled={!products?.length} className="gap-1">
+                <Button variant="outline" size="sm" onClick={() => products && exportProductsToExcel(products as Product[])} disabled={!products?.length} className="gap-1">
                   <FileSpreadsheet className="w-4 h-4" />
                   <span className="hidden sm:inline">Excel</span>
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => products && exportProductsToPDF(products)} disabled={!products?.length} className="gap-1">
+                <Button variant="outline" size="sm" onClick={() => products && exportProductsToPDF(products as Product[])} disabled={!products?.length} className="gap-1">
                   <Download className="w-4 h-4" />
                   <span className="hidden sm:inline">PDF</span>
                 </Button>
@@ -172,32 +192,22 @@ export default function ProductsPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredProducts?.map((product) => {
-                    const isLowStock = product.stock <= product.low_stock_threshold;
+                    const isLowStock = product.stock_base_units <= product.low_stock_threshold;
                     return (
                       <TableRow key={product.id}>
                         <TableCell>
                           <div className="max-w-[120px] sm:max-w-[180px]">
                             <p className="font-medium truncate">{product.name}</p>
-                            {product.category && (
-                              <span 
-                                className="text-xs px-1.5 py-0.5 rounded"
-                                style={{ 
-                                  backgroundColor: `${product.category.color}15`,
-                                  color: product.category.color
-                                }}
-                              >
-                                {product.category.name}
-                              </span>
-                            )}
+                            <p className="text-xs text-muted-foreground">{product.code}</p>
                           </div>
                         </TableCell>
                         <TableCell className="hidden sm:table-cell">
-                          {getSaleTypeDisplay(product)}
+                          {getSaleTypeDisplay(product as Product)}
                         </TableCell>
                         <TableCell className="text-sm font-medium text-primary">
-                          {getPriceDisplay(product)}
+                          {getPriceDisplay(product as Product)}
                         </TableCell>
-                        <TableCell className="text-sm">{Number(product.stock).toFixed(0)}</TableCell>
+                        <TableCell className="text-sm">{getReadableStock(product as Product)}</TableCell>
                         {isAdmin && (
                           <TableCell className="hidden md:table-cell">
                             <span className={cn(isLowStock ? "badge-low-stock" : "badge-in-stock")}>{isLowStock ? "Bajo" : "OK"}</span>
@@ -205,9 +215,9 @@ export default function ProductsPage() {
                         )}
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => setViewingProduct(product)}><Eye className="w-4 h-4" /></Button>
-                            {isAdmin && <Button variant="ghost" size="icon" onClick={() => handleEdit(product)}><Pencil className="w-4 h-4" /></Button>}
-                            {isAdmin && <Button variant="ghost" size="icon" onClick={() => setDeletingProduct(product)} className="text-destructive hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>}
+                            <Button variant="ghost" size="icon" onClick={() => setViewingProduct(product as Product)}><Eye className="w-4 h-4" /></Button>
+                            {isAdmin && <Button variant="ghost" size="icon" onClick={() => handleEdit(product as Product)}><Pencil className="w-4 h-4" /></Button>}
+                            {isAdmin && <Button variant="ghost" size="icon" onClick={() => setDeletingProduct(product as Product)} className="text-destructive hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -222,7 +232,6 @@ export default function ProductsPage() {
 
       {isAdmin && <ProductFormDialog open={isFormOpen} onOpenChange={handleFormClose} product={editingProduct} />}
       <ProductDetailDialog open={!!viewingProduct} onOpenChange={() => setViewingProduct(null)} product={viewingProduct} />
-      {isAdmin && <CategoryFormDialog open={isCategoryOpen} onOpenChange={setIsCategoryOpen} />}
 
       <AlertDialog open={!!deletingProduct} onOpenChange={() => setDeletingProduct(null)}>
         <AlertDialogContent className="bg-card mx-4">

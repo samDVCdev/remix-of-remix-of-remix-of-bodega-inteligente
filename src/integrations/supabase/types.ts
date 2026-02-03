@@ -74,33 +74,6 @@ export type Database = {
         }
         Relationships: []
       }
-      categories: {
-        Row: {
-          color: string | null
-          created_at: string
-          description: string | null
-          id: string
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          color?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          color?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          name?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       inventory_movements: {
         Row: {
           amount_paid: number
@@ -117,6 +90,7 @@ export type Database = {
           quantity: number
           sold_by: string | null
           total_amount: number
+          unit_equivalence_id: string | null
           unit_price: number
           units_per_package: number | null
         }
@@ -135,6 +109,7 @@ export type Database = {
           quantity: number
           sold_by?: string | null
           total_amount: number
+          unit_equivalence_id?: string | null
           unit_price: number
           units_per_package?: number | null
         }
@@ -153,6 +128,7 @@ export type Database = {
           quantity?: number
           sold_by?: string | null
           total_amount?: number
+          unit_equivalence_id?: string | null
           unit_price?: number
           units_per_package?: number | null
         }
@@ -162,6 +138,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_unit_equivalence_id_fkey"
+            columns: ["unit_equivalence_id"]
+            isOneToOne: false
+            referencedRelation: "unit_equivalences"
             referencedColumns: ["id"]
           },
         ]
@@ -203,7 +186,7 @@ export type Database = {
       }
       products: {
         Row: {
-          category_id: string | null
+          base_unit: string
           code: string
           created_at: string
           description: string | null
@@ -215,11 +198,12 @@ export type Database = {
           sale_price: number
           sale_type: string
           stock: number
+          stock_base_units: number
           unit: string
           updated_at: string
         }
         Insert: {
-          category_id?: string | null
+          base_unit?: string
           code: string
           created_at?: string
           description?: string | null
@@ -231,11 +215,12 @@ export type Database = {
           sale_price: number
           sale_type?: string
           stock?: number
+          stock_base_units?: number
           unit?: string
           updated_at?: string
         }
         Update: {
-          category_id?: string | null
+          base_unit?: string
           code?: string
           created_at?: string
           description?: string | null
@@ -247,24 +232,18 @@ export type Database = {
           sale_price?: number
           sale_type?: string
           stock?: number
+          stock_base_units?: number
           unit?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "products_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       profiles: {
         Row: {
           created_at: string
           full_name: string | null
           id: string
+          is_active: boolean
           updated_at: string
           user_id: string
         }
@@ -272,6 +251,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          is_active?: boolean
           updated_at?: string
           user_id: string
         }
@@ -279,10 +259,49 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          is_active?: boolean
           updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      unit_equivalences: {
+        Row: {
+          base_unit_multiplier: number
+          created_at: string
+          display_order: number
+          id: string
+          price: number
+          product_id: string
+          unit_name: string
+        }
+        Insert: {
+          base_unit_multiplier: number
+          created_at?: string
+          display_order?: number
+          id?: string
+          price?: number
+          product_id: string
+          unit_name: string
+        }
+        Update: {
+          base_unit_multiplier?: number
+          created_at?: string
+          display_order?: number
+          id?: string
+          price?: number
+          product_id?: string
+          unit_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unit_equivalences_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -343,6 +362,15 @@ export type Database = {
       }
     }
     Functions: {
+      calculate_base_units: {
+        Args: {
+          _product_id: string
+          _quantity: number
+          _unit_equivalence_id?: string
+        }
+        Returns: number
+      }
+      get_readable_stock: { Args: { _product_id: string }; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]

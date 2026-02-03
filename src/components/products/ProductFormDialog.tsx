@@ -9,9 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Product, UNITS, SALE_TYPES, SaleType } from "@/types/inventory";
+import { Product, UNITS, SALE_TYPES, SaleType, BASE_UNITS } from "@/types/inventory";
 import { useCreateProduct, useUpdateProduct } from "@/hooks/useProducts";
-import { useCategories } from "@/hooks/useCategories";
 import { Package, Scale, Layers, Plus, Trash2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 
@@ -21,19 +20,27 @@ const variantSchema = z.object({
   units_count: z.coerce.number().min(1, "Mínimo 1").optional(),
 });
 
+const equivalenceSchema = z.object({
+  unit_name: z.string().min(1, "Nombre requerido"),
+  base_unit_multiplier: z.coerce.number().min(1, "Mínimo 1"),
+  price: z.coerce.number().min(0, "Precio debe ser >= 0"),
+  display_order: z.coerce.number().min(0).optional(),
+});
+
 const productSchema = z.object({
   code: z.string().min(1, "El código es requerido"),
   name: z.string().min(1, "El nombre es requerido"),
   description: z.string().optional(),
   purchase_price: z.coerce.number().min(0, "El precio debe ser mayor o igual a 0"),
   sale_price: z.coerce.number().min(0, "El precio debe ser mayor o igual a 0"),
-  stock: z.coerce.number().min(0, "El stock debe ser mayor o igual a 0"),
+  stock_base_units: z.coerce.number().min(0, "El stock debe ser mayor o igual a 0"),
+  base_unit: z.string().min(1, "La unidad base es requerida"),
   unit: z.string().min(1, "La unidad es requerida"),
   low_stock_threshold: z.coerce.number().min(0, "El umbral debe ser mayor o igual a 0"),
-  category_id: z.string().optional(),
   sale_type: z.enum(['unit', 'weight', 'variants']),
   price_per_kilo: z.coerce.number().min(0).optional(),
   variants: z.array(variantSchema).optional(),
+  equivalences: z.array(equivalenceSchema).optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -47,7 +54,6 @@ interface ProductFormDialogProps {
 export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDialogProps) {
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
-  const { data: categories } = useCategories();
   const isEditing = !!product;
 
   const form = useForm<ProductFormData>({
@@ -58,19 +64,25 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
       description: "",
       purchase_price: 0,
       sale_price: 0,
-      stock: 0,
+      stock_base_units: 0,
+      base_unit: "unidad",
       unit: "unidades",
       low_stock_threshold: 5,
-      category_id: "",
       sale_type: "unit",
       price_per_kilo: 0,
       variants: [],
+      equivalences: [],
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields: variantFields, append: appendVariant, remove: removeVariant } = useFieldArray({
     control: form.control,
     name: "variants",
+  });
+
+  const { fields: equivalenceFields, append: appendEquivalence, remove: removeEquivalence } = useFieldArray({
+    control: form.control,
+    name: "equivalences",
   });
 
   const saleType = form.watch("sale_type");
@@ -83,16 +95,22 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
         description: product.description || "",
         purchase_price: product.purchase_price,
         sale_price: product.sale_price,
-        stock: product.stock,
+        stock_base_units: product.stock_base_units,
+        base_unit: product.base_unit || "unidad",
         unit: product.unit,
         low_stock_threshold: product.low_stock_threshold,
-        category_id: product.category_id || "",
         sale_type: product.sale_type || "unit",
         price_per_kilo: product.price_per_kilo || 0,
         variants: product.variants?.map(v => ({
           name: v.name,
           price: v.price,
           units_count: v.units_count || 1,
+        })) || [],
+        equivalences: product.equivalences?.map(e => ({
+          unit_name: e.unit_name,
+          base_unit_multiplier: e.base_unit_multiplier,
+          price: e.price,
+          display_order: e.display_order,
         })) || [],
       });
     } else {
@@ -102,13 +120,14 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
         description: "",
         purchase_price: 0,
         sale_price: 0,
-        stock: 0,
+        stock_base_units: 0,
+        base_unit: "unidad",
         unit: "unidades",
         low_stock_threshold: 5,
-        category_id: "",
         sale_type: "unit",
         price_per_kilo: 0,
         variants: [],
+        equivalences: [],
       });
     }
   }, [product, form]);
@@ -117,7 +136,7 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
     try {
       const payload = {
         ...data,
-        category_id: data.category_id || null,
+        stock: data.stock_base_units, // Keep stock in sync
         variants: data.sale_type === 'variants' ? data.variants : undefined,
       };
       
@@ -205,10 +224,10 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
 
               <FormField
                 control={form.control}
-                name="unit"
+                name="base_unit"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Unidad *</FormLabel>
+                    <FormLabel>Unidad Base *</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -216,7 +235,7 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent className="bg-popover">
-                        {UNITS.map((unit) => (
+                        {BASE_UNITS.map((unit) => (
                           <SelectItem key={unit.value} value={unit.value}>
                             {unit.label}
                           </SelectItem>
@@ -245,30 +264,20 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
 
             <FormField
               control={form.control}
-              name="category_id"
+              name="unit"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Categoría</FormLabel>
-                  <Select 
-                    onValueChange={(val) => field.onChange(val === "none" ? "" : val)} 
-                    value={field.value || "none"}
-                  >
+                  <FormLabel>Unidad de Medida</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar categoría" />
+                        <SelectValue placeholder="Seleccionar" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="bg-popover">
-                      <SelectItem value="none">Sin categoría</SelectItem>
-                      {categories?.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full" 
-                              style={{ backgroundColor: cat.color }}
-                            />
-                            {cat.name}
-                          </div>
+                      {UNITS.map((unit) => (
+                        <SelectItem key={unit.value} value={unit.value}>
+                          {unit.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -325,7 +334,7 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => append({ name: "", price: 0, units_count: 1 })}
+                    onClick={() => appendVariant({ name: "", price: 0, units_count: 1 })}
                     className="gap-1"
                   >
                     <Plus className="w-4 h-4" />
@@ -333,13 +342,13 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
                   </Button>
                 </div>
                 
-                {fields.length === 0 && (
+                {variantFields.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-4 border border-dashed rounded-lg">
                     Agrega al menos una presentación
                   </p>
                 )}
 
-                {fields.map((field, index) => (
+                {variantFields.map((field, index) => (
                   <div key={field.id} className="flex gap-2 items-start p-3 bg-muted/30 rounded-lg border">
                     <div className="flex-1 space-y-2">
                       <Input
@@ -351,7 +360,7 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
                           type="number"
                           step="0.01"
                           min="0"
-                          placeholder="Precio"
+                          placeholder="Precio USD"
                           {...form.register(`variants.${index}.price`)}
                         />
                         <Input
@@ -367,7 +376,7 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
                       type="button"
                       variant="ghost"
                       size="icon"
-                      onClick={() => remove(index)}
+                      onClick={() => removeVariant(index)}
                       className="text-destructive hover:text-destructive shrink-0"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -422,14 +431,14 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="stock"
+                name="stock_base_units"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Stock Inicial</FormLabel>
+                    <FormLabel>Stock (Unidades Base)</FormLabel>
                     <FormControl>
                       <Input 
                         type="number" 
-                        step="0.001" 
+                        step="1" 
                         min="0" 
                         placeholder="0" 
                         {...field} 
@@ -449,7 +458,7 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
                     <FormControl>
                       <Input 
                         type="number" 
-                        step="0.001" 
+                        step="1" 
                         min="0" 
                         placeholder="5" 
                         {...field} 
@@ -459,6 +468,61 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* Equivalences section */}
+            <div className="space-y-3 border-t pt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Equivalencias de Unidades</Label>
+                  <p className="text-xs text-muted-foreground">Define presentaciones (Caja, Cartón, etc.)</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => appendEquivalence({ unit_name: "", base_unit_multiplier: 1, price: 0, display_order: equivalenceFields.length })}
+                  className="gap-1"
+                >
+                  <Plus className="w-4 h-4" />
+                  Agregar
+                </Button>
+              </div>
+
+              {equivalenceFields.map((field, index) => (
+                <div key={field.id} className="flex gap-2 items-start p-3 bg-muted/30 rounded-lg border">
+                  <div className="flex-1 space-y-2">
+                    <Input
+                      placeholder="Ej: Caja, Cartón, Docena"
+                      {...form.register(`equivalences.${index}.unit_name`)}
+                    />
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        min="1"
+                        placeholder="Unidades base"
+                        {...form.register(`equivalences.${index}.base_unit_multiplier`)}
+                      />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="Precio USD"
+                        {...form.register(`equivalences.${index}.price`)}
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeEquivalence(index)}
+                    className="text-destructive hover:text-destructive shrink-0"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
             </div>
 
             <div className="flex justify-end gap-3 pt-4">

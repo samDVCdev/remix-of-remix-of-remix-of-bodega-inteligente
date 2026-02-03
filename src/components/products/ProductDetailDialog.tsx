@@ -3,7 +3,7 @@ import { Product } from "@/types/inventory";
 import { useCurrency } from "@/hooks/useCurrency";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Package, DollarSign, TrendingUp, TrendingDown, Calendar, Tag, Scale, Layers } from "lucide-react";
+import { Package, DollarSign, TrendingUp, TrendingDown, Calendar, Scale, Layers } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -14,11 +14,11 @@ interface ProductDetailDialogProps {
 }
 
 export function ProductDetailDialog({ open, onOpenChange, product }: ProductDetailDialogProps) {
-  const { formatPrice } = useCurrency();
+  const { formatPrice, exchangeRate } = useCurrency();
 
   if (!product) return null;
 
-  const isLowStock = product.stock <= product.low_stock_threshold;
+  const isLowStock = product.stock_base_units <= product.low_stock_threshold;
   const margin = product.sale_price - product.purchase_price;
   const marginPercent = product.purchase_price > 0 
     ? ((margin / product.purchase_price) * 100).toFixed(1) 
@@ -38,6 +38,21 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
   const saleTypeInfo = getSaleTypeInfo();
   const SaleTypeIcon = saleTypeInfo.icon;
 
+  // Función para mostrar stock legible
+  const getReadableStock = () => {
+    if (product.base_unit === 'gramo') {
+      const kilos = Math.floor(product.stock_base_units / 1000);
+      const gramos = product.stock_base_units % 1000;
+      if (kilos > 0 && gramos > 0) {
+        return `${kilos} kg y ${gramos} g`;
+      } else if (kilos > 0) {
+        return `${kilos} kg`;
+      }
+      return `${gramos} g`;
+    }
+    return `${product.stock_base_units} ${product.base_unit}s`;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px] bg-card mx-4 max-h-[90vh] overflow-y-auto">
@@ -49,25 +64,16 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Header with name and category */}
+          {/* Header with name */}
           <div className="p-4 rounded-lg bg-muted/50 border border-border">
             <h3 className="text-lg font-semibold">{product.name}</h3>
             <div className="flex flex-wrap items-center gap-2 mt-2">
-              {product.category && (
-                <span 
-                  className="px-2 py-0.5 rounded-full text-xs font-medium inline-flex items-center gap-1"
-                  style={{ 
-                    backgroundColor: `${product.category.color}20`,
-                    color: product.category.color
-                  }}
-                >
-                  <Tag className="w-3 h-3" />
-                  {product.category.name}
-                </span>
-              )}
               <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium inline-flex items-center gap-1 bg-muted", saleTypeInfo.color)}>
                 <SaleTypeIcon className="w-3 h-3" />
                 {saleTypeInfo.label}
+              </span>
+              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                Unidad base: {product.base_unit}
               </span>
             </div>
             {product.description && (
@@ -79,9 +85,9 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 rounded-lg bg-muted/30 border border-border">
               <p className="text-xs text-muted-foreground mb-1">Stock Actual</p>
-              <p className="text-2xl font-bold">
-                {Number(product.stock).toFixed(0)}
-                <span className="text-sm font-normal text-muted-foreground ml-1">{product.unit}</span>
+              <p className="text-xl font-bold">{getReadableStock()}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                ({product.stock_base_units} {product.base_unit}s base)
               </p>
             </div>
             <div className="p-4 rounded-lg bg-muted/30 border border-border">
@@ -95,7 +101,7 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
                 {isLowStock ? "Stock Bajo" : "Stock Normal"}
               </Badge>
               <p className="text-xs text-muted-foreground mt-2">
-                Mínimo: {product.low_stock_threshold} {product.unit}
+                Mínimo: {product.low_stock_threshold} {product.base_unit}s
               </p>
             </div>
           </div>
@@ -103,12 +109,19 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
           {/* Prices based on sale type */}
           <div className="space-y-3">
             {product.sale_type === 'weight' ? (
-              <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20">
-                <div className="flex items-center gap-2">
-                  <Scale className="w-4 h-4 text-primary" />
-                  <span className="text-sm">Precio por Kilo</span>
+              <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Scale className="w-4 h-4 text-primary" />
+                    <span className="text-sm">Precio por Kilo</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-bold text-primary">${(product.price_per_kilo || 0).toFixed(2)}</span>
+                    <p className="text-xs text-muted-foreground">
+                      Bs. {((product.price_per_kilo || 0) * exchangeRate).toFixed(2)}
+                    </p>
+                  </div>
                 </div>
-                <span className="font-bold text-primary">{formatPrice(product.price_per_kilo || 0)}</span>
               </div>
             ) : product.sale_type === 'variants' && product.variants ? (
               <div className="p-3 rounded-lg bg-muted/30 border border-border space-y-2">
@@ -119,7 +132,12 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
                 {product.variants.map((variant) => (
                   <div key={variant.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                     <span className="text-sm">{variant.name}</span>
-                    <span className="font-semibold text-primary">{formatPrice(variant.price)}</span>
+                    <div className="text-right">
+                      <span className="font-semibold text-primary">${variant.price.toFixed(2)}</span>
+                      <p className="text-xs text-muted-foreground">
+                        Bs. {(variant.price * exchangeRate).toFixed(2)}
+                      </p>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -130,7 +148,12 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
                     <TrendingDown className="w-4 h-4 text-amber-500" />
                     <span className="text-sm">Precio de Compra</span>
                   </div>
-                  <span className="font-semibold">{formatPrice(product.purchase_price)}</span>
+                  <div className="text-right">
+                    <span className="font-semibold">${product.purchase_price.toFixed(2)}</span>
+                    <p className="text-xs text-muted-foreground">
+                      Bs. {(product.purchase_price * exchangeRate).toFixed(2)}
+                    </p>
+                  </div>
                 </div>
                 
                 <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20">
@@ -138,7 +161,12 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
                     <TrendingUp className="w-4 h-4 text-primary" />
                     <span className="text-sm">Precio de Venta</span>
                   </div>
-                  <span className="font-bold text-primary">{formatPrice(product.sale_price)}</span>
+                  <div className="text-right">
+                    <span className="font-bold text-primary">${product.sale_price.toFixed(2)}</span>
+                    <p className="text-xs text-muted-foreground">
+                      Bs. {(product.sale_price * exchangeRate).toFixed(2)}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between p-3 rounded-lg bg-success/10 border border-success/20">
@@ -147,7 +175,7 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
                     <span className="text-sm">Margen de Ganancia</span>
                   </div>
                   <span className="font-semibold text-success">
-                    {formatPrice(margin)} ({marginPercent}%)
+                    ${margin.toFixed(2)} ({marginPercent}%)
                   </span>
                 </div>
               </>
@@ -158,7 +186,10 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
           <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
             <p className="text-sm text-muted-foreground">Valor en Inventario</p>
             <p className="text-2xl font-display font-bold text-primary">
-              {formatPrice(product.sale_price * product.stock)}
+              ${(product.sale_price * product.stock_base_units).toFixed(2)}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Bs. {(product.sale_price * product.stock_base_units * exchangeRate).toFixed(2)}
             </p>
           </div>
 

@@ -20,7 +20,7 @@ export function useMovements(type?: "entrada" | "salida") {
       const { data, error } = await query;
       
       if (error) throw error;
-      return data as InventoryMovement[];
+      return data as unknown as InventoryMovement[];
     },
   });
 }
@@ -35,6 +35,7 @@ interface CreateMovementData {
   is_credit?: boolean;
   customer_name?: string;
   sold_by?: string;
+  unit_equivalence_id?: string;
 }
 
 export function useCreateMovement() {
@@ -57,6 +58,7 @@ export function useCreateMovement() {
           is_paid: !data.is_credit,
           customer_name: data.customer_name,
           sold_by: data.sold_by,
+          unit_equivalence_id: data.unit_equivalence_id,
           total_amount,
         })
         .select()

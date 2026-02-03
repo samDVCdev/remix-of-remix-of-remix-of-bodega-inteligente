@@ -24,7 +24,7 @@ export default function SalesPage() {
   const { data: businessStatus } = useBusinessStatus();
   const { data: movements, isLoading } = useMovements("salida");
   const deleteMovement = useDeleteMovement();
-  const { formatPrice } = useCurrency();
+  const { exchangeRate } = useCurrency();
 
   const handleDelete = async () => {
     if (deletingMovement) {
@@ -119,10 +119,16 @@ export default function SalesPage() {
                         {Number(movement.quantity).toFixed(0)}
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-sm">
-                        {formatPrice(Number(movement.unit_price))}
+                        <div>
+                          <p>${Number(movement.unit_price).toFixed(2)}</p>
+                          <p className="text-xs text-muted-foreground">Bs. {(Number(movement.unit_price) * exchangeRate).toFixed(2)}</p>
+                        </div>
                       </TableCell>
-                      <TableCell className="font-semibold text-primary text-sm">
-                        {formatPrice(Number(movement.total_amount))}
+                      <TableCell className="font-semibold text-sm">
+                        <div>
+                          <p className="text-primary">${Number(movement.total_amount).toFixed(2)}</p>
+                          <p className="text-xs text-muted-foreground">Bs. {(Number(movement.total_amount) * exchangeRate).toFixed(2)}</p>
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">

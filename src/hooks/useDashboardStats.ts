@@ -35,7 +35,7 @@ export function useDashboardStats() {
       const totalProducts = products?.length || 0;
       
       const totalInventoryValue = products?.reduce(
-        (sum, p) => sum + (Number(p.sale_price) * Number(p.stock)), 
+        (sum, p) => sum + (Number(p.sale_price) * Number(p.stock_base_units)), 
         0
       ) || 0;
 
@@ -48,7 +48,7 @@ export function useDashboardStats() {
         .reduce((sum, m) => sum + Number(m.total_amount), 0) || 0;
 
       const lowStockProducts = products?.filter(
-        (p) => Number(p.stock) <= Number(p.low_stock_threshold)
+        (p) => Number(p.stock_base_units) <= Number(p.low_stock_threshold)
       ) || [];
 
       // Calculate top selling products
@@ -59,7 +59,7 @@ export function useDashboardStats() {
 
       const topSellingProducts = Object.entries(salesByProduct)
         .map(([productId, totalSold]) => ({
-          product: products?.find((p) => p.id === productId) as Product,
+          product: products?.find((p) => p.id === productId) as unknown as Product,
           totalSold,
         }))
         .filter((item) => item.product)
@@ -76,9 +76,9 @@ export function useDashboardStats() {
         totalInventoryValue,
         todayIncome,
         todayExpenses,
-        lowStockProducts: lowStockProducts as Product[],
+        lowStockProducts: lowStockProducts as unknown as Product[],
         topSellingProducts,
-        recentProducts: recentProducts as Product[],
+        recentProducts: recentProducts as unknown as Product[],
       };
     },
   });

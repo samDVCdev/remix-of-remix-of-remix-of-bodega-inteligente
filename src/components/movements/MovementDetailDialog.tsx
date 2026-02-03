@@ -12,7 +12,7 @@ interface MovementDetailDialogProps {
 }
 
 export function MovementDetailDialog({ open, onOpenChange, movement }: MovementDetailDialogProps) {
-  const { formatPrice } = useCurrency();
+  const { formatPrice, exchangeRate, currency } = useCurrency();
   
   if (!movement) return null;
 
@@ -20,6 +20,17 @@ export function MovementDetailDialog({ open, onOpenChange, movement }: MovementD
   const Icon = isEntry ? ArrowDownToLine : ShoppingCart;
   const colorClass = isEntry ? "text-success" : "text-primary";
   const bgColorClass = isEntry ? "bg-success/10" : "bg-primary/10";
+
+  // Format dual currency
+  const formatDualPrice = (usdAmount: number) => {
+    const vesAmount = usdAmount * exchangeRate;
+    return (
+      <div className="text-right">
+        <p className="font-bold">${usdAmount.toFixed(2)}</p>
+        <p className="text-xs text-muted-foreground">Bs. {vesAmount.toFixed(2)}</p>
+      </div>
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -41,17 +52,6 @@ export function MovementDetailDialog({ open, onOpenChange, movement }: MovementD
               <div>
                 <p className="font-display font-bold text-lg">{movement.product?.name}</p>
                 <p className="text-sm text-muted-foreground font-mono">{movement.product?.code}</p>
-                {movement.product?.category && (
-                  <span 
-                    className="inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium"
-                    style={{ 
-                      backgroundColor: `${movement.product.category.color}20`,
-                      color: movement.product.category.color
-                    }}
-                  >
-                    {movement.product.category.name}
-                  </span>
-                )}
               </div>
             </div>
           </div>
@@ -83,9 +83,7 @@ export function MovementDetailDialog({ open, onOpenChange, movement }: MovementD
                 <DollarSign className="w-4 h-4" />
                 <span className="text-xs font-medium">Precio Unitario</span>
               </div>
-              <p className="font-semibold">
-                {formatPrice(Number(movement.unit_price))}
-              </p>
+              {formatDualPrice(Number(movement.unit_price))}
             </div>
 
             <div className={`stat-card p-4 ${bgColorClass}`}>
@@ -93,9 +91,14 @@ export function MovementDetailDialog({ open, onOpenChange, movement }: MovementD
                 <DollarSign className="w-4 h-4" />
                 <span className="text-xs font-medium">Total</span>
               </div>
-              <p className={`font-bold text-lg ${colorClass}`}>
-                {formatPrice(Number(movement.total_amount))}
-              </p>
+              <div className="text-right">
+                <p className={`font-bold text-lg ${colorClass}`}>
+                  ${Number(movement.total_amount).toFixed(2)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Bs. {(Number(movement.total_amount) * exchangeRate).toFixed(2)}
+                </p>
+              </div>
             </div>
           </div>
 
