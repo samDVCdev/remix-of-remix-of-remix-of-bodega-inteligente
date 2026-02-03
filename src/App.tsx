@@ -11,7 +11,6 @@ import ProductsPage from "./pages/ProductsPage";
 import EntriesPage from "./pages/EntriesPage";
 import SalesPage from "./pages/SalesPage";
 import POSPage from "./pages/POSPage";
-import CategoriesPage from "./pages/CategoriesPage";
 import ReportsPage from "./pages/ReportsPage";
 import AccountsReceivablePage from "./pages/AccountsReceivablePage";
 import UsersPage from "./pages/UsersPage";
@@ -27,14 +26,13 @@ const App = () => (
       <CurrencyProvider>
         <TooltipProvider>
           <Toaster />
-          <Sonner />
+          <Sonner position="top-right" />
           <BrowserRouter>
             <Routes>
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/" element={<ProtectedRoute requireAdmin><Index /></ProtectedRoute>} />
               <Route path="/pos" element={<ProtectedRoute><POSPage /></ProtectedRoute>} />
               <Route path="/productos" element={<ProtectedRoute><ProductsPage /></ProtectedRoute>} />
-              <Route path="/categorias" element={<ProtectedRoute requireAdmin><CategoriesPage /></ProtectedRoute>} />
               <Route path="/entradas" element={<ProtectedRoute requireAdmin><EntriesPage /></ProtectedRoute>} />
               <Route path="/ventas" element={<ProtectedRoute><SalesPage /></ProtectedRoute>} />
               <Route path="/salidas" element={<ProtectedRoute><SalesPage /></ProtectedRoute>} />

@@ -11,10 +11,11 @@ export function exportProductsToExcel(products: Product[]) {
     'Código': p.code,
     'Nombre': p.name,
     'Descripción': p.description || '',
-    'Categoría': p.category?.name || 'Sin categoría',
+    'Tipo Venta': p.sale_type === 'unit' ? 'Por Unidad' : p.sale_type === 'weight' ? 'Por Peso' : 'Variantes',
+    'Unidad Base': p.base_unit,
     'Precio Compra': p.purchase_price,
     'Precio Venta': p.sale_price,
-    'Stock': p.stock,
+    'Stock Base': p.stock_base_units,
     'Unidad': p.unit,
     'Stock Mínimo': p.low_stock_threshold,
   }));
@@ -39,18 +40,18 @@ export function exportProductsToPDF(products: Product[]) {
   const tableData = products.map(p => [
     p.code,
     p.name.substring(0, 20),
-    p.category?.name || '-',
+    p.sale_type === 'unit' ? 'Unidad' : p.sale_type === 'weight' ? 'Peso' : 'Var.',
     `$${Number(p.sale_price).toFixed(2)}`,
-    `${Number(p.stock).toFixed(0)} ${p.unit}`,
-    p.stock <= p.low_stock_threshold ? 'Bajo' : 'OK',
+    `${Number(p.stock_base_units).toFixed(0)} ${p.base_unit}`,
+    p.stock_base_units <= p.low_stock_threshold ? 'Bajo' : 'OK',
   ]);
 
   autoTable(doc, {
-    head: [['Código', 'Nombre', 'Categoría', 'Precio', 'Stock', 'Estado']],
+    head: [['Código', 'Nombre', 'Tipo', 'Precio', 'Stock', 'Estado']],
     body: tableData,
     startY: 42,
     styles: { fontSize: 8 },
-    headStyles: { fillColor: [37, 99, 235] },
+    headStyles: { fillColor: [22, 163, 74] },
   });
 
   doc.save(`productos_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
@@ -63,11 +64,10 @@ export function exportMovementsToExcel(movements: InventoryMovement[], startDate
     'Tipo': m.movement_type === 'entrada' ? 'Entrada' : 'Venta',
     'Producto': m.product?.name || '',
     'Código': m.product?.code || '',
-    'Categoría': m.product?.category?.name || 'Sin categoría',
     'Cantidad': m.quantity,
     'Unidad': m.product?.unit || '',
-    'Precio Unit.': m.unit_price,
-    'Total': m.total_amount,
+    'Precio Unit. USD': m.unit_price,
+    'Total USD': m.total_amount,
   }));
 
   const totalEntradas = movements.filter(m => m.movement_type === 'entrada').reduce((s, m) => s + m.total_amount, 0);
@@ -80,44 +80,40 @@ export function exportMovementsToExcel(movements: InventoryMovement[], startDate
     'Tipo': '',
     'Producto': '',
     'Código': '',
-    'Categoría': '',
     'Cantidad': '' as any,
     'Unidad': '',
-    'Precio Unit.': '' as any,
-    'Total': '' as any,
+    'Precio Unit. USD': '' as any,
+    'Total USD': '' as any,
   });
   data.push({
     'Fecha': 'Total Compras:',
     'Tipo': '',
     'Producto': '',
     'Código': '',
-    'Categoría': '',
     'Cantidad': '' as any,
     'Unidad': '',
-    'Precio Unit.': '' as any,
-    'Total': totalEntradas,
+    'Precio Unit. USD': '' as any,
+    'Total USD': totalEntradas,
   });
   data.push({
     'Fecha': 'Total Ventas:',
     'Tipo': '',
     'Producto': '',
     'Código': '',
-    'Categoría': '',
     'Cantidad': '' as any,
     'Unidad': '',
-    'Precio Unit.': '' as any,
-    'Total': totalVentas,
+    'Precio Unit. USD': '' as any,
+    'Total USD': totalVentas,
   });
   data.push({
     'Fecha': 'Balance:',
     'Tipo': '',
     'Producto': '',
     'Código': '',
-    'Categoría': '',
     'Cantidad': '' as any,
     'Unidad': '',
-    'Precio Unit.': '' as any,
-    'Total': totalVentas - totalEntradas,
+    'Precio Unit. USD': '' as any,
+    'Total USD': totalVentas - totalEntradas,
   });
 
   const ws = XLSX.utils.json_to_sheet(data);
@@ -149,18 +145,17 @@ export function exportMovementsToPDF(movements: InventoryMovement[], startDate: 
     format(new Date(m.movement_date), 'dd/MM/yy'),
     m.movement_type === 'entrada' ? 'Entrada' : 'Venta',
     m.product?.name?.substring(0, 15) || '',
-    m.product?.category?.name?.substring(0, 10) || '-',
     m.quantity.toString(),
     `$${Number(m.unit_price).toFixed(2)}`,
     `$${Number(m.total_amount).toFixed(2)}`,
   ]);
 
   autoTable(doc, {
-    head: [['Fecha', 'Tipo', 'Producto', 'Categoría', 'Cant.', 'P.Unit', 'Total']],
+    head: [['Fecha', 'Tipo', 'Producto', 'Cant.', 'P.Unit', 'Total']],
     body: tableData,
     startY: 64,
     styles: { fontSize: 7 },
-    headStyles: { fillColor: [37, 99, 235] },
+    headStyles: { fillColor: [22, 163, 74] },
   });
 
   doc.save(`reporte_${startDate}_${endDate}.pdf`);

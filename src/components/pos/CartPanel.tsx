@@ -25,28 +25,20 @@ export function CartPanel({
   isOpen,
   onClose
 }: CartPanelProps) {
-  const { formatPrice } = useCurrency();
+  const { exchangeRate } = useCurrency();
 
   if (!isOpen) return null;
 
   return (
-<div className={`
-    fixed inset-0 z-50 
-    ${isOpen ? 'block' : 'hidden'} 
-  `}>
-    {/* Backdrop: Solo visible en móvil */}
-    <div 
-      className="absolute inset-0 bg-black/50"
-      onClick={onClose}
-    />
+    <div className={`fixed inset-0 z-50 ${isOpen ? 'block' : 'hidden'}`}>
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/50"
+        onClick={onClose}
+      />
 
-    {/* Panel: En PC quitamos el 'absolute' para que respete el flujo */}
-    <div className="
-      absolute right-0 top-0 bottom-0 
-      w-full max-w-md bg-card border-l border-border 
-      flex flex-col 
-      animate-slide-up 
-    ">
+      {/* Panel */}
+      <div className="absolute right-0 top-0 bottom-0 w-full max-w-md bg-card border-l border-border flex flex-col animate-slide-up">
         <div className="flex items-center justify-between p-4 border-b border-border bg-muted/30">
           <div className="flex items-center gap-2">
             <ShoppingCart className="w-5 h-5 text-primary" />
@@ -76,16 +68,19 @@ export function CartPanel({
                       <h4 className="font-semibold truncate">{item.display_name}</h4>
                       <p className="text-sm text-muted-foreground">
                         {item.grams 
-                          ? `${item.grams}gr × ${formatPrice(item.unit_price)}/gr`
-                          : `${item.quantity} × ${formatPrice(item.unit_price)}`
+                          ? `${item.grams}gr × $${item.unit_price.toFixed(4)}/gr`
+                          : `${item.quantity} × $${item.unit_price.toFixed(2)}`
                         }
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-primary">{formatPrice(item.total)}</p>
+                      <p className="font-bold text-primary">${item.total.toFixed(2)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Bs. {(item.total * exchangeRate).toFixed(2)}
+                      </p>
                       <button
                         onClick={() => onRemoveItem(item.id)}
-                        className="text-destructive text-sm hover:underline"
+                        className="text-destructive text-sm hover:underline mt-1"
                       >
                         Eliminar
                       </button>
@@ -100,11 +95,19 @@ export function CartPanel({
         {/* Footer */}
         <div className="border-t border-border p-4 space-y-4 bg-card">
           {/* Total */}
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Total a cobrar:</span>
-            <span className="text-3xl font-display font-bold text-primary">
-              {formatPrice(total)}
-            </span>
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Total USD:</span>
+              <span className="text-3xl font-display font-bold text-primary">
+                ${total.toFixed(2)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Total Bs:</span>
+              <span className="text-xl font-display font-bold text-foreground">
+                Bs. {(total * exchangeRate).toFixed(2)}
+              </span>
+            </div>
           </div>
 
           {/* Actions */}

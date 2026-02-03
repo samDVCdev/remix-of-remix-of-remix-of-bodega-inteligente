@@ -1,13 +1,14 @@
-export interface Category {
-  id: string;
-  name: string;
-  description: string | null;
-  color: string;
-  created_at: string;
-  updated_at: string;
-}
-
 export type SaleType = 'unit' | 'weight' | 'variants';
+
+export interface UnitEquivalence {
+  id: string;
+  product_id: string;
+  unit_name: string;
+  base_unit_multiplier: number;
+  display_order: number;
+  price: number;
+  created_at: string;
+}
 
 export interface ProductVariant {
   id: string;
@@ -26,15 +27,16 @@ export interface Product {
   purchase_price: number;
   sale_price: number;
   stock: number;
+  stock_base_units: number;
+  base_unit: string;
   unit: string;
   low_stock_threshold: number;
-  category_id: string | null;
   sale_type: SaleType;
   price_per_kilo: number;
   created_at: string;
   updated_at: string;
-  category?: Category;
   variants?: ProductVariant[];
+  equivalences?: UnitEquivalence[];
 }
 
 export interface InventoryMovement {
@@ -53,20 +55,22 @@ export interface InventoryMovement {
   amount_paid: number;
   customer_name: string | null;
   sold_by: string | null;
+  unit_equivalence_id: string | null;
   created_at: string;
   product?: Product;
   seller_name?: string;
 }
 
 export interface CartItem {
-  id: string; // unique cart item id
+  id: string;
   product: Product;
   quantity: number;
   unit_price: number;
   total: number;
-  variant?: ProductVariant; // for variants products
-  grams?: number; // for weight products
-  display_name: string; // product name with variant/grams info
+  variant?: ProductVariant;
+  equivalence?: UnitEquivalence;
+  grams?: number;
+  display_name: string;
 }
 
 export interface MultiSaleItem {
@@ -92,6 +96,12 @@ export const SALE_TYPES = [
   { value: 'variants', label: 'Múltiples Presentaciones', icon: 'Layers' },
 ] as const;
 
+export const BASE_UNITS = [
+  { value: 'unidad', label: 'Unidad' },
+  { value: 'gramo', label: 'Gramo' },
+  { value: 'mililitro', label: 'Mililitro' },
+] as const;
+
 export const UNITS = [
   { value: 'unidades', label: 'Unidades' },
   { value: 'litros', label: 'Litros' },
@@ -109,15 +119,4 @@ export const PACKAGE_TYPES = [
   { value: 'paquete', label: 'Paquete' },
   { value: 'caja', label: 'Caja' },
   { value: 'bulto', label: 'Bulto' },
-] as const;
-
-export const CATEGORY_COLORS = [
-  '#16a34a', // green (primary)
-  '#22c55e', // light green
-  '#3b82f6', // blue
-  '#f59e0b', // amber
-  '#ef4444', // red
-  '#8b5cf6', // violet
-  '#ec4899', // pink
-  '#06b6d4', // cyan
 ] as const;
