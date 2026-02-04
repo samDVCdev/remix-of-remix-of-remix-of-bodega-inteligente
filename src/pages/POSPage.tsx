@@ -5,13 +5,14 @@ import { CartPanel } from "@/components/pos/CartPanel";
 import { CartFAB } from "@/components/pos/CartFAB";
 import { WeightModal } from "@/components/pos/WeightModal";
 import { VariantModal } from "@/components/pos/VariantModal";
+import { EquivalenceModal } from "@/components/pos/EquivalenceModal";
 import { CreditSaleModal } from "@/components/pos/CreditSaleModal";
 import { useProductsWithVariants } from "@/hooks/useProducts";
 import { useCart } from "@/hooks/useCart";
 import { useCreateMovement } from "@/hooks/useMovements";
 import { useAuth } from "@/hooks/useAuth";
 import { useBusinessStatus } from "@/hooks/useBusinessStatus";
-import { Product, ProductVariant } from "@/types/inventory";
+import { Product, ProductVariant, UnitEquivalence } from "@/types/inventory";
 import { toast } from "sonner";
 import { ShoppingCart } from "lucide-react";
 
@@ -20,6 +21,7 @@ export default function POSPage() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [weightProduct, setWeightProduct] = useState<Product | null>(null);
   const [variantProduct, setVariantProduct] = useState<Product | null>(null);
+  const [unitProduct, setUnitProduct] = useState<Product | null>(null);
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
 
   const { data: products, isLoading } = useProductsWithVariants();
@@ -53,7 +55,13 @@ export default function POSPage() {
         setVariantProduct(product);
         break;
       default:
-        addUnitProduct(product);
+        // For unit products, show the equivalence modal if they have equivalences
+        // Otherwise add directly
+        if (product.equivalences && product.equivalences.length > 0) {
+          setUnitProduct(product);
+        } else {
+          addUnitProduct(product, null, 1);
+        }
         break;
     }
   };
@@ -66,6 +74,10 @@ export default function POSPage() {
     addVariantProduct(product, variant, quantity);
   };
 
+  const handleEquivalenceConfirm = (product: Product, equivalence: UnitEquivalence | null, quantity: number) => {
+    addUnitProduct(product, equivalence, quantity);
+  };
+
   const processSale = async (isCredit: boolean, customerName?: string) => {
     if (items.length === 0) return;
 
@@ -76,16 +88,40 @@ export default function POSPage() {
 
     try {
       for (const item of items) {
+        // Calculate the quantity in base units
+        let quantityInBaseUnits: number;
+        let unitEquivalenceId: string | undefined;
+        
+        if (item.grams) {
+          // Weight product: grams are already base units
+          quantityInBaseUnits = item.grams;
+        } else if (item.equivalence) {
+          // Has equivalence: multiply quantity by multiplier
+          quantityInBaseUnits = item.quantity * item.equivalence.base_unit_multiplier;
+          unitEquivalenceId = item.equivalence.id;
+        } else if (item.variant) {
+          // Variant product: multiply by units_count
+          quantityInBaseUnits = item.quantity * (item.variant.units_count || 1);
+        } else {
+          // Simple unit product
+          quantityInBaseUnits = item.quantity;
+        }
+
         await createMovement.mutateAsync({
           product_id: item.product.id,
-          quantity: item.grams ? item.grams / 1000 : item.quantity, // Convert grams to kg for weight products
-          unit_price: item.grams ? item.product.price_per_kilo || 0 : item.unit_price,
+          quantity: quantityInBaseUnits,
+          unit_price: item.unit_price,
           movement_date: new Date().toISOString().split("T")[0],
           movement_type: "salida",
-          notes: item.variant ? `Variante: ${item.variant.name}` : undefined,
+          notes: item.equivalence 
+            ? `Equivalencia: ${item.equivalence.unit_name} x${item.quantity}` 
+            : item.variant 
+              ? `Variante: ${item.variant.name} x${item.quantity}` 
+              : undefined,
           is_credit: isCredit,
           customer_name: isCredit ? customerName : undefined,
           sold_by: user?.id,
+          unit_equivalence_id: unitEquivalenceId,
         });
       }
 
@@ -188,6 +224,14 @@ export default function POSPage() {
         onOpenChange={(open) => !open && setVariantProduct(null)}
         product={variantProduct}
         onConfirm={handleVariantConfirm}
+      />
+
+      {/* Equivalence Modal for unit products */}
+      <EquivalenceModal
+        open={!!unitProduct}
+        onOpenChange={(open) => !open && setUnitProduct(null)}
+        product={unitProduct}
+        onConfirm={handleEquivalenceConfirm}
       />
 
       {/* Credit Sale Modal */}

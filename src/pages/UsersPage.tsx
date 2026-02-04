@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Shield, User, Pencil, Power, PowerOff, Search } from "lucide-react";
+import { Users, Shield, User, Pencil, Power, PowerOff, Search, UserPlus } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useUsers, useUpdateUserRole, useUpdateUserName, useToggleUserStatus } from "@/hooks/useUsers";
+import { CreateUserDialog } from "@/components/users/CreateUserDialog";
+import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -24,6 +26,7 @@ interface UserWithRole {
 }
 
 export default function UsersPage() {
+  const queryClient = useQueryClient();
   const { data: users, isLoading } = useUsers();
   const updateRole = useUpdateUserRole();
   const updateName = useUpdateUserName();
@@ -33,6 +36,7 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
   const [newName, setNewName] = useState("");
   const [togglingUser, setTogglingUser] = useState<UserWithRole | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   const filteredUsers = users?.filter(
     (u) => 
@@ -77,6 +81,10 @@ export default function UsersPage() {
             </h1>
             <p className="text-muted-foreground mt-1 text-sm sm:text-base">Administra los usuarios del sistema</p>
           </div>
+          <Button onClick={() => setIsCreateDialogOpen(true)} className="gap-2">
+            <UserPlus className="w-4 h-4" />
+            <span>Crear Usuario</span>
+          </Button>
         </div>
 
         {/* Search */}
@@ -279,6 +287,13 @@ export default function UsersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Create User Dialog */}
+      <CreateUserDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ["users"] })}
+      />
     </MainLayout>
   );
 }

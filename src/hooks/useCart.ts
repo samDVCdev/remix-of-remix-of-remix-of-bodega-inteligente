@@ -1,36 +1,51 @@
 import { useState, useCallback } from "react";
-import { CartItem, Product, ProductVariant } from "@/types/inventory";
+import { CartItem, Product, ProductVariant, UnitEquivalence } from "@/types/inventory";
 import { toast } from "sonner";
 
 export function useCart() {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  const addUnitProduct = useCallback((product: Product) => {
+  const addUnitProduct = useCallback((product: Product, equivalence: UnitEquivalence | null, quantity: number = 1) => {
     setItems(prev => {
       const existingIndex = prev.findIndex(
-        item => item.product.id === product.id && !item.variant && !item.grams
+        item => item.product.id === product.id && 
+                !item.variant && 
+                !item.grams && 
+                item.equivalence?.id === equivalence?.id
       );
+
+      const price = equivalence?.price ?? product.sale_price;
+      const baseUnitsPerItem = equivalence?.base_unit_multiplier ?? 1;
 
       if (existingIndex >= 0) {
         const updated = [...prev];
+        const newQuantity = updated[existingIndex].quantity + quantity;
         updated[existingIndex] = {
           ...updated[existingIndex],
-          quantity: updated[existingIndex].quantity + 1,
-          total: (updated[existingIndex].quantity + 1) * updated[existingIndex].unit_price
+          quantity: newQuantity,
+          total: newQuantity * price
         };
         return updated;
       }
 
+      const displayName = equivalence 
+        ? `${product.name} (${equivalence.unit_name})`
+        : product.name;
+
       return [...prev, {
-        id: `${product.id}-${Date.now()}`,
+        id: `${product.id}-${equivalence?.id || 'base'}-${Date.now()}`,
         product,
-        quantity: 1,
-        unit_price: product.sale_price,
-        total: product.sale_price,
-        display_name: product.name
+        quantity,
+        unit_price: price,
+        total: price * quantity,
+        display_name: displayName,
+        equivalence,
+        base_units_per_item: baseUnitsPerItem
       }];
     });
-    toast.success(`${product.name} agregado`);
+    
+    const label = equivalence ? `${product.name} (${equivalence.unit_name})` : product.name;
+    toast.success(`${label} agregado`);
   }, []);
 
   const addWeightProduct = useCallback((product: Product, grams: number) => {
@@ -44,7 +59,8 @@ export function useCart() {
       unit_price: pricePerGram,
       total,
       grams,
-      display_name: `${product.name} (${grams}gr)`
+      display_name: `${product.name} (${grams}gr)`,
+      base_units_per_item: 1 // 1 gram = 1 base unit
     }]);
     toast.success(`${product.name} (${grams}gr) agregado`);
   }, []);
@@ -73,7 +89,8 @@ export function useCart() {
         unit_price: variant.price,
         total: variant.price * quantity,
         variant,
-        display_name: `${product.name} (${variant.name})`
+        display_name: `${product.name} (${variant.name})`,
+        base_units_per_item: variant.units_count || 1
       }];
     });
     toast.success(`${product.name} (${variant.name}) agregado`);
