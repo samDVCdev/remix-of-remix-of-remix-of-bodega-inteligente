@@ -16,11 +16,18 @@ export function useBusinessStatus() {
     queryKey: ["business-status"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("business_status" as any)
+        .from("business_status")
         .select("*")
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       if (error) throw error;
+      
+      // If no row exists, return a default closed state
+      if (!data) {
+        return { id: '', is_open: false, opened_at: null, closed_at: null, opened_by: null, updated_at: '' } as BusinessStatus;
+      }
+      
       return data as unknown as BusinessStatus;
     },
   });
@@ -49,31 +56,31 @@ export function useToggleBusinessStatus() {
         .from("business_status")
         .select("id")
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (!firstRow) throw new Error("No se encontró el registro de estado");
 
-      const { data, error } = await supabase
+      const { data: result, error: updateError } = await supabase
         .from("business_status")
         .update(updateData)
         .eq("id", firstRow.id) 
         .select()
         .single();
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
       // Log audit event using direct insert
       await supabase
-        .from("audit_logs" as any)
+        .from("audit_logs")
         .insert({
           action: isOpen ? 'BUSINESS_OPENED' : 'BUSINESS_CLOSED',
           entity_type: 'business_status',
-          entity_id: (data as any).id,
+          entity_id: (result as any).id,
           user_id: user?.id,
           details: { is_open: isOpen }
         });
 
-      return data as unknown as BusinessStatus;
+      return result as unknown as BusinessStatus;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["business-status"] });

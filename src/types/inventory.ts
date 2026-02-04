@@ -71,6 +71,7 @@ export interface CartItem {
   equivalence?: UnitEquivalence;
   grams?: number;
   display_name: string;
+  base_units_per_item?: number;
 }
 
 export interface MultiSaleItem {
