@@ -7,26 +7,40 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Product, BASE_UNITS } from "@/types/inventory";
+import { Product } from "@/types/inventory";
 import { useCreateProduct, useUpdateProduct } from "@/hooks/useProducts";
-import { Plus, Trash2, Save } from "lucide-react";
+import { Plus, Trash2, Save, Scale, Ruler, Droplets, Package } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { useCurrency } from "@/hooks/useCurrency";
+
+// Tipos de medida soportados
+const MEASUREMENT_TYPES = [
+  { value: "unit", label: "Por Unidades (Piezas)", baseUnit: "unidad", icon: Package },
+  { value: "weight", label: "Por Peso (Kilogramos)", baseUnit: "gramo", icon: Scale },
+  { value: "length", label: "Por Longitud (Metros)", baseUnit: "centimetro", icon: Ruler },
+  { value: "volume", label: "Por Volumen (Litros)", baseUnit: "mililitro", icon: Droplets },
+] as const;
+
+type MeasurementType = typeof MEASUREMENT_TYPES[number]["value"];
 
 const salePriceSchema = z.object({
   unit_name: z.string().min(1, "Nombre requerido"),
-  base_unit_multiplier: z.coerce.number().min(1, "Mínimo 1"),
+  base_unit_multiplier: z.coerce.number().min(0.01, "Mínimo 0.01"),
   price: z.coerce.number().min(0, "Precio debe ser >= 0"),
 });
 
 const productSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
-  base_unit: z.string().min(1, "La unidad mínima es requerida"),
-  // Empaque de compra (cómo se compra el producto)
+  measurement_type: z.enum(["unit", "weight", "length", "volume"]),
+  // Empaque de compra
   purchase_package_name: z.string().min(1, "Nombre del empaque requerido"),
-  purchase_package_units: z.coerce.number().min(1, "Mínimo 1 unidad"),
+  purchase_package_content: z.coerce.number().min(0.01, "Mínimo 0.01"),
   purchase_price: z.coerce.number().min(0, "Precio debe ser >= 0"),
-  // Precios de venta (equivalencias)
-  sale_prices: z.array(salePriceSchema).min(1, "Agrega al menos un precio de venta"),
+  initial_stock_packages: z.coerce.number().min(0, "Mínimo 0"),
+  // Para productos por peso/longitud/volumen: precio por unidad de medida
+  price_per_measure_unit: z.coerce.number().min(0).optional(),
+  // Para productos por unidades: presentaciones de venta
+  sale_prices: z.array(salePriceSchema).optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -41,15 +55,18 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const isEditing = !!product;
+  const { exchangeRate } = useCurrency();
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: "",
-      base_unit: "unidad",
+      measurement_type: "unit",
       purchase_package_name: "Bulto",
-      purchase_package_units: 1,
+      purchase_package_content: 1,
       purchase_price: 0,
+      initial_stock_packages: 0,
+      price_per_measure_unit: 0,
       sale_prices: [{ unit_name: "Unidad", base_unit_multiplier: 1, price: 0 }],
     },
   });
@@ -59,20 +76,70 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
     name: "sale_prices",
   });
 
+  const measurementType = form.watch("measurement_type");
+  const pricePerMeasure = form.watch("price_per_measure_unit") || 0;
+
+  const getMeasurementConfig = (type: MeasurementType) => {
+    switch (type) {
+      case "weight":
+        return { 
+          measureLabel: "KG", 
+          contentLabel: "Kilogramos",
+          priceLabel: "PRECIO DE VENTA POR KG",
+          baseUnit: "gramo",
+          multiplier: 1000 // 1kg = 1000g
+        };
+      case "length":
+        return { 
+          measureLabel: "MT", 
+          contentLabel: "Metros",
+          priceLabel: "PRECIO DE VENTA POR MT",
+          baseUnit: "centimetro",
+          multiplier: 100 // 1m = 100cm
+        };
+      case "volume":
+        return { 
+          measureLabel: "LT", 
+          contentLabel: "Litros",
+          priceLabel: "PRECIO DE VENTA POR LT",
+          baseUnit: "mililitro",
+          multiplier: 1000 // 1L = 1000ml
+        };
+      default:
+        return { 
+          measureLabel: "UN", 
+          contentLabel: "Unidades",
+          priceLabel: "PRECIO POR UNIDAD",
+          baseUnit: "unidad",
+          multiplier: 1
+        };
+    }
+  };
+
+  const config = getMeasurementConfig(measurementType);
+  const isMeasureBasedSale = measurementType !== "unit";
+
   useEffect(() => {
     if (product) {
-      // Find the main purchase equivalence (highest multiplier)
       const purchaseEquiv = product.equivalences?.reduce((max, e) => 
         e.base_unit_multiplier > (max?.base_unit_multiplier || 0) ? e : max, 
         product.equivalences[0]
       );
       
+      // Determine measurement type from base_unit
+      let measType: MeasurementType = "unit";
+      if (product.base_unit === "gramo") measType = "weight";
+      else if (product.base_unit === "centimetro") measType = "length";
+      else if (product.base_unit === "mililitro") measType = "volume";
+      
       form.reset({
         name: product.name,
-        base_unit: product.base_unit || "unidad",
+        measurement_type: measType,
         purchase_package_name: purchaseEquiv?.unit_name || "Bulto",
-        purchase_package_units: purchaseEquiv?.base_unit_multiplier || 1,
+        purchase_package_content: purchaseEquiv?.base_unit_multiplier || 1,
         purchase_price: product.purchase_price,
+        initial_stock_packages: 0,
+        price_per_measure_unit: product.price_per_kilo || 0,
         sale_prices: product.equivalences?.length ? product.equivalences.map(e => ({
           unit_name: e.unit_name,
           base_unit_multiplier: e.base_unit_multiplier,
@@ -82,10 +149,12 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
     } else {
       form.reset({
         name: "",
-        base_unit: "unidad",
+        measurement_type: "unit",
         purchase_package_name: "Bulto",
-        purchase_package_units: 1,
+        purchase_package_content: 1,
         purchase_price: 0,
+        initial_stock_packages: 0,
+        price_per_measure_unit: 0,
         sale_prices: [{ unit_name: "Unidad", base_unit_multiplier: 1, price: 0 }],
       });
     }
@@ -93,44 +162,60 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
 
   const onSubmit = async (data: ProductFormData) => {
     try {
-      // Generate code from name
       const code = data.name.substring(0, 3).toUpperCase() + "-" + Date.now().toString().slice(-4);
+      const measureConfig = getMeasurementConfig(data.measurement_type);
       
-      // Build equivalences array including purchase package
-      const equivalences = data.sale_prices.map((sp, index) => ({
-        unit_name: sp.unit_name,
-        base_unit_multiplier: sp.base_unit_multiplier,
-        price: sp.price,
-        display_order: index,
-      }));
+      let equivalences: Array<{
+        unit_name: string;
+        base_unit_multiplier: number;
+        price: number;
+        display_order: number;
+      }> = [];
 
-      // Add purchase package as an equivalence if not already in sale prices
-      const hasPurchasePackage = equivalences.some(
-        e => e.unit_name.toLowerCase() === data.purchase_package_name.toLowerCase()
-      );
-      if (!hasPurchasePackage) {
-        equivalences.push({
-          unit_name: data.purchase_package_name,
-          base_unit_multiplier: data.purchase_package_units,
-          price: data.purchase_price, // or calculate sale price
-          display_order: equivalences.length,
-        });
+      let salePrice = 0;
+      let saleType: 'unit' | 'weight' = 'unit';
+      let pricePerKilo = 0;
+
+      if (data.measurement_type === "unit") {
+        // Products sold by unit - use sale prices
+        equivalences = (data.sale_prices || []).map((sp, index) => ({
+          unit_name: sp.unit_name,
+          base_unit_multiplier: sp.base_unit_multiplier,
+          price: sp.price,
+          display_order: index,
+        }));
+        salePrice = data.sale_prices?.find(sp => sp.base_unit_multiplier === 1)?.price || 
+                    data.sale_prices?.[0]?.price || 0;
+      } else {
+        // Products sold by measure (weight, length, volume)
+        saleType = 'weight'; // We'll use weight type for all measure-based products
+        pricePerKilo = data.price_per_measure_unit || 0;
+        salePrice = pricePerKilo;
       }
 
-      // Find base price (unit price)
-      const unitPrice = data.sale_prices.find(sp => sp.base_unit_multiplier === 1)?.price || 
-                        data.sale_prices[0]?.price || 0;
+      // Add purchase package as equivalence
+      const packageMultiplier = data.purchase_package_content * measureConfig.multiplier;
+      equivalences.push({
+        unit_name: data.purchase_package_name,
+        base_unit_multiplier: packageMultiplier,
+        price: data.purchase_price,
+        display_order: equivalences.length,
+      });
+
+      // Calculate initial stock in base units
+      const initialStockBaseUnits = data.initial_stock_packages * packageMultiplier;
 
       const payload = {
         code: isEditing && product ? product.code : code,
         name: data.name,
-        base_unit: data.base_unit,
-        unit: data.base_unit + "es", // pluralize
+        base_unit: measureConfig.baseUnit,
+        unit: measureConfig.baseUnit + "s",
         purchase_price: data.purchase_price,
-        sale_price: unitPrice,
-        stock_base_units: isEditing ? product?.stock_base_units || 0 : 0, // Don't set stock here
+        sale_price: salePrice,
+        stock_base_units: isEditing ? product?.stock_base_units || 0 : initialStockBaseUnits,
         low_stock_threshold: 10,
-        sale_type: 'unit' as const,
+        sale_type: saleType,
+        price_per_kilo: pricePerKilo,
         equivalences,
       };
 
@@ -146,24 +231,20 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
     }
   };
 
-  const baseUnit = form.watch("base_unit");
-  const getBaseUnitLabel = () => {
-    const unit = BASE_UNITS.find(u => u.value === baseUnit);
-    return unit?.label || "Unidad";
-  };
+  const MeasureIcon = MEASUREMENT_TYPES.find(m => m.value === measurementType)?.icon || Package;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] lg:max-w-[700px] bg-card mx-4 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-xl uppercase tracking-wide">
-            {isEditing ? "Editar Producto" : "Configuración Inicial"}
+            {isEditing ? "Editar Producto" : "Nueva Ficha de Producto"}
           </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Product Name and Base Unit */}
+            {/* Product Name and Measurement Type */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -174,7 +255,7 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
                       Nombre del Producto
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder="Ej: Harina" className="h-12" {...field} />
+                      <Input placeholder="Ej: Harina de Trigo" className="h-12" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -183,22 +264,22 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
 
               <FormField
                 control={form.control}
-                name="base_unit"
+                name="measurement_type"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs uppercase text-muted-foreground tracking-wider">
-                      Unidad Mínima
+                      Unidad de Medida
                     </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="h-12">
-                          <SelectValue placeholder="Seleccionar" />
+                          <SelectValue placeholder="Seleccionar tipo" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent className="bg-popover">
-                        {BASE_UNITS.map((unit) => (
-                          <SelectItem key={unit.value} value={unit.value}>
-                            {unit.label} ({unit.value.substring(0, 2)})
+                        {MEASUREMENT_TYPES.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -217,16 +298,16 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
                   name="purchase_price"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs uppercase text-muted-foreground tracking-wider">
-                        Costo por Bulto ($)
+                      <FormLabel className="text-xs uppercase text-primary font-semibold tracking-wider">
+                        Costo de Compra ($)
                       </FormLabel>
                       <FormControl>
                         <Input 
                           type="number" 
                           step="0.01" 
                           min="0" 
-                          placeholder="0" 
-                          className="h-12"
+                          placeholder="0.00" 
+                          className="h-12 text-lg"
                           {...field} 
                         />
                       </FormControl>
@@ -237,10 +318,10 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
 
                 <FormField
                   control={form.control}
-                  name="purchase_package_units"
+                  name="initial_stock_packages"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs uppercase text-muted-foreground tracking-wider text-primary">
+                      <FormLabel className="text-xs uppercase text-primary font-semibold tracking-wider">
                         Stock Inicial (Bultos)
                       </FormLabel>
                       <FormControl>
@@ -249,14 +330,11 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
                           step="1" 
                           min="0" 
                           placeholder="0" 
-                          className="h-12 border-primary/50"
-                          disabled
-                          value={0}
+                          className="h-12 text-lg"
+                          {...field}
                         />
                       </FormControl>
-                      <p className="text-xs text-muted-foreground">
-                        Usa "Ingreso Inventario" después
-                      </p>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -269,10 +347,10 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs uppercase text-muted-foreground tracking-wider">
-                        Nombre de Empaque (Compra)
+                        Empaque (Bulto/Caja)
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder="Bulto" className="h-12" {...field} />
+                        <Input placeholder="Ej: Saco" className="h-12" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -281,24 +359,24 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
 
                 <FormField
                   control={form.control}
-                  name="purchase_package_units"
+                  name="purchase_package_content"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs uppercase text-muted-foreground tracking-wider">
-                        Contenido por Bulto
+                        Contenido por Empaque
                       </FormLabel>
                       <FormControl>
                         <Input 
                           type="number" 
-                          step="1" 
-                          min="1" 
-                          placeholder="1" 
+                          step={isMeasureBasedSale ? "0.01" : "1"}
+                          min="0.01" 
+                          placeholder="Ej: 50" 
                           className="h-12"
                           {...field} 
                         />
                       </FormControl>
                       <p className="text-xs text-muted-foreground">
-                        {getBaseUnitLabel()}s por empaque
+                        {config.contentLabel} por empaque
                       </p>
                     </FormItem>
                   )}
@@ -306,61 +384,129 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
               </div>
             </div>
 
-            {/* Sale Prices Section */}
+            {/* Sale Definition Section */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs uppercase text-muted-foreground tracking-wider">
-                  Precios de Venta
+              <div className="flex items-center gap-2">
+                <span className="text-primary">$</span>
+                <Label className="text-xs uppercase text-muted-foreground tracking-wider font-semibold">
+                  Definición de Venta
                 </Label>
-                <Button
-                  type="button"
-                  variant="link"
-                  size="sm"
-                  onClick={() => appendSalePrice({ unit_name: "", base_unit_multiplier: 1, price: 0 })}
-                  className="gap-1 text-primary"
-                >
-                  <Plus className="w-4 h-4" />
-                  Añadir
-                </Button>
               </div>
 
-              {salePriceFields.map((field, index) => (
-                <div key={field.id} className="flex gap-2 items-center">
-                  <Input
-                    placeholder="Nombre (Unidad, Paquete...)"
-                    className="flex-1 h-12"
-                    {...form.register(`sale_prices.${index}.unit_name`)}
+              {isMeasureBasedSale ? (
+                /* Measure-based sale (weight, length, volume) */
+                <div className="bg-card border-2 border-primary/20 rounded-2xl p-6 text-center space-y-4">
+                  <div className="w-14 h-14 mx-auto bg-primary/20 rounded-full flex items-center justify-center">
+                    <MeasureIcon className="w-7 h-7 text-primary" />
+                  </div>
+                  
+                  <p className="text-xs uppercase text-primary tracking-wider font-semibold">
+                    {config.priceLabel}
+                  </p>
+
+                  <FormField
+                    control={form.control}
+                    name="price_per_measure_unit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex items-center justify-center gap-3">
+                          <span className="text-2xl text-muted-foreground">$</span>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              step="0.01" 
+                              min="0" 
+                              placeholder="0.00"
+                              className="h-14 text-3xl font-bold text-center bg-muted/50 border-border max-w-[180px]"
+                              {...field} 
+                            />
+                          </FormControl>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-primary"
+                            title="Ver en Bs"
+                          >
+                            <span className="text-sm font-semibold">Bs</span>
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Bs. {(pricePerMeasure * exchangeRate).toFixed(2)} / {config.measureLabel}
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                  <Input
-                    type="number"
-                    min="1"
-                    placeholder="Cant."
-                    className="w-20 h-12"
-                    {...form.register(`sale_prices.${index}.base_unit_multiplier`)}
-                  />
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="Precio $"
-                    className="w-24 h-12"
-                    {...form.register(`sale_prices.${index}.price`)}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeSalePrice(index)}
-                    className="text-destructive hover:text-destructive shrink-0"
-                    disabled={salePriceFields.length === 1}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+
+                  <p className="text-xs text-muted-foreground italic">
+                    * El sistema permitirá pesar/medir al momento de vender
+                  </p>
                 </div>
-              ))}
-              <p className="text-xs text-muted-foreground">
-                Nombre | Cantidad de {getBaseUnitLabel()}s | Precio USD
-              </p>
+              ) : (
+                /* Unit-based sale - multiple presentations */
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs uppercase text-muted-foreground tracking-wider">
+                      Presentaciones (Unidad, Caja, Media...)
+                    </span>
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      onClick={() => appendSalePrice({ unit_name: "", base_unit_multiplier: 1, price: 0 })}
+                      className="gap-1 text-primary"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Añadir Otra
+                    </Button>
+                  </div>
+
+                  {salePriceFields.map((field, index) => (
+                    <div key={field.id} className="flex gap-2 items-center bg-muted/30 p-3 rounded-lg">
+                      <div className="flex-1">
+                        <Label className="text-[10px] uppercase text-muted-foreground">Etiqueta</Label>
+                        <Input
+                          placeholder="Unidad"
+                          className="h-10 mt-1"
+                          {...form.register(`sale_prices.${index}.unit_name`)}
+                        />
+                      </div>
+                      <div className="w-20">
+                        <Label className="text-[10px] uppercase text-muted-foreground">Cantidad</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          placeholder="1"
+                          className="h-10 mt-1"
+                          {...form.register(`sale_prices.${index}.base_unit_multiplier`)}
+                        />
+                      </div>
+                      <div className="w-24">
+                        <Label className="text-[10px] uppercase text-muted-foreground">Precio $</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          className="h-10 mt-1"
+                          {...form.register(`sale_prices.${index}.price`)}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeSalePrice(index)}
+                        className="text-destructive hover:text-destructive shrink-0 mt-5"
+                        disabled={salePriceFields.length === 1}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <Button 
@@ -369,7 +515,7 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
               disabled={createProduct.isPending || updateProduct.isPending}
             >
               <Save className="w-5 h-5" />
-              {isEditing ? "Actualizar Producto" : "Registrar Producto"}
+              Guardar Producto
             </Button>
           </form>
         </Form>
