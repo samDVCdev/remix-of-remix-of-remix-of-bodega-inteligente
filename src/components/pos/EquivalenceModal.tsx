@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Product, UnitEquivalence } from "@/types/inventory";
 import { useCurrency } from "@/hooks/useCurrency";
-import { Minus, Plus, Package } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
 
 interface EquivalenceModalProps {
   open: boolean;
@@ -17,17 +17,24 @@ export function EquivalenceModal({ open, onOpenChange, product, onConfirm }: Equ
   const [quantity, setQuantity] = useState(1);
   const { formatPrice } = useCurrency();
 
-  if (!product) return null;
-
   // Filter out purchase package equivalences (display_order === 999)
   // These are only for inventory management, not for sale
-  const saleEquivalences = (product.equivalences || []).filter(
+  const saleEquivalences = (product?.equivalences || []).filter(
     eq => eq.display_order !== 999
   );
   
   const hasEquivalences = saleEquivalences.length > 0;
 
-  const handleSelectEquivalence = (equivalence: UnitEquivalence | null) => {
+  // Auto-select first equivalence when modal opens
+  useEffect(() => {
+    if (open && saleEquivalences.length > 0 && !selectedEquivalence) {
+      setSelectedEquivalence(saleEquivalences[0]);
+    }
+  }, [open, saleEquivalences.length]);
+
+  if (!product) return null;
+
+  const handleSelectEquivalence = (equivalence: UnitEquivalence) => {
     setSelectedEquivalence(equivalence);
     setQuantity(1);
   };
@@ -49,15 +56,7 @@ export function EquivalenceModal({ open, onOpenChange, product, onConfirm }: Equ
 
   // Get the price for the selected option
   const getPrice = () => {
-    if (selectedEquivalence) {
-      return selectedEquivalence.price;
-    }
-    return product.sale_price;
-  };
-
-  // Get display name for base unit
-  const getBaseUnitLabel = () => {
-    return `${product.base_unit} (${formatPrice(product.sale_price)})`;
+    return selectedEquivalence?.price || 0;
   };
 
   return (
@@ -73,25 +72,8 @@ export function EquivalenceModal({ open, onOpenChange, product, onConfirm }: Equ
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Options list */}
+          {/* Options list - Only show sale equivalences, no separate base unit option */}
           <div className="space-y-2">
-            {/* Base unit option (always show) */}
-            <button
-              onClick={() => handleSelectEquivalence(null)}
-              className={`w-full p-4 rounded-xl border transition-all flex items-center justify-between ${
-                selectedEquivalence === null
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border hover:border-primary/50'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Package className="w-5 h-5 text-muted-foreground" />
-                <span className="font-medium capitalize">{product.base_unit}</span>
-              </div>
-              <span className="text-primary font-bold">{formatPrice(product.sale_price)}</span>
-            </button>
-
-            {/* Equivalences options */}
             {saleEquivalences.map((eq) => (
               <button
                 key={eq.id}
