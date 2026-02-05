@@ -135,8 +135,9 @@ export default function SalesPage() {
                           <div>
                             {movement.product?.sale_type === 'weight' ? (
                               <>
-                                <p>${(Number(movement.unit_price) * 1000).toFixed(2)}/kg</p>
-                                <p className="text-xs text-muted-foreground">Bs. {(Number(movement.unit_price) * 1000 * exchangeRate).toFixed(2)}/kg</p>
+                                {/* Calculate price per kg from total/quantity for accuracy */}
+                                <p>${((Number(movement.total_amount) / Number(movement.quantity)) * 1000).toFixed(2)}/kg</p>
+                                <p className="text-xs text-muted-foreground">Bs. {((Number(movement.total_amount) / Number(movement.quantity)) * 1000 * exchangeRate).toFixed(2)}/kg</p>
                               </>
                             ) : (
                               <>
