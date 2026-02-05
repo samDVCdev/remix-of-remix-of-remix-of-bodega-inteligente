@@ -133,8 +133,17 @@ export default function SalesPage() {
                         </TableCell>
                         <TableCell className="hidden md:table-cell text-sm">
                           <div>
-                            <p>${Number(movement.unit_price).toFixed(2)}</p>
-                            <p className="text-xs text-muted-foreground">Bs. {(Number(movement.unit_price) * exchangeRate).toFixed(2)}</p>
+                            {movement.product?.sale_type === 'weight' ? (
+                              <>
+                                <p>${(Number(movement.unit_price) * 1000).toFixed(2)}/kg</p>
+                                <p className="text-xs text-muted-foreground">Bs. {(Number(movement.unit_price) * 1000 * exchangeRate).toFixed(2)}/kg</p>
+                              </>
+                            ) : (
+                              <>
+                                <p>${Number(movement.unit_price).toFixed(2)}</p>
+                                <p className="text-xs text-muted-foreground">Bs. {(Number(movement.unit_price) * exchangeRate).toFixed(2)}</p>
+                              </>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="font-semibold text-sm">
