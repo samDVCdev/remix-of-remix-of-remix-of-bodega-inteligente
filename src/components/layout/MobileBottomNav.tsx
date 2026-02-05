@@ -37,8 +37,6 @@ export function MobileBottomNav() {
   ];
 
   const moreMenuItems = [
-    { name: "Categorías", href: "/categorias" },
-    { name: "Entradas", href: "/entradas" },
     { name: "Cuentas por Cobrar", href: "/cuentas-por-cobrar" },
     { name: "Reportes", href: "/reportes" },
     { name: "Usuarios", href: "/usuarios" },

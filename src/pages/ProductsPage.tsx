@@ -8,7 +8,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ProductCreateDialog } from "@/components/products/ProductCreateDialog";
 import { InventoryEntryDialog } from "@/components/products/InventoryEntryDialog";
 import { ProductDetailDialog } from "@/components/products/ProductDetailDialog";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { useProductsWithVariants, useDeleteProduct } from "@/hooks/useProducts";
+import { usePagination } from "@/hooks/usePagination";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useAuth } from "@/hooks/useAuth";
 import { Product } from "@/types/inventory";
@@ -34,6 +36,16 @@ export default function ProductsPage() {
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.code.toLowerCase().includes(search.toLowerCase())
   );
+
+  const {
+    paginatedData,
+    currentPage,
+    totalPages,
+    totalItems,
+    itemsPerPage,
+    onPageChange,
+    onItemsPerPageChange,
+  } = usePagination(filteredProducts, { initialItemsPerPage: 10 });
 
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
@@ -109,9 +121,13 @@ export default function ProductsPage() {
     }
   };
 
-  // Get main package equivalence for display
+  // Get main package equivalence for display (purchase package - the one with display_order 999)
   const getMainEquivalence = (product: Product) => {
     if (!product.equivalences?.length) return null;
+    // Purchase package has display_order 999
+    const purchasePackage = product.equivalences.find(e => e.display_order === 999);
+    if (purchasePackage) return purchasePackage;
+    // Fallback to largest multiplier
     return product.equivalences.reduce((max, e) => 
       e.base_unit_multiplier > (max?.base_unit_multiplier || 0) ? e : max,
       product.equivalences[0]
@@ -139,7 +155,7 @@ export default function ProductsPage() {
       
       return (
         <div>
-          <span className="font-semibold text-primary">{product.stock_base_units} {product.base_unit}</span>
+          <span className="font-semibold text-primary">{product.stock_base_units} {product.base_unit}s</span>
           <p className="text-xs text-muted-foreground">
             ≈ {packages.toFixed(1)} {mainPackage.unit_name.toUpperCase()}S
           </p>
@@ -217,60 +233,73 @@ export default function ProductsPage() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="table-header">
-                    <TableHead>Nombre</TableHead>
-                    <TableHead className="hidden sm:table-cell">Tipo</TableHead>
-                    <TableHead>Precio</TableHead>
-                    <TableHead>Stock</TableHead>
-                    {isAdmin && <TableHead className="hidden md:table-cell">Estado</TableHead>}
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProducts?.map((product) => {
-                    const isLowStock = product.stock_base_units <= product.low_stock_threshold;
-                    return (
-                      <TableRow key={product.id}>
-                        <TableCell>
-                          <div className="max-w-[150px] sm:max-w-[220px]">
-                            <p className="font-medium truncate">{product.name}</p>
-                            {getEquivalenceDisplay(product as Product) ? (
-                              <p className="text-xs text-primary font-medium">
-                                {getEquivalenceDisplay(product as Product)}
-                              </p>
-                            ) : (
-                              <p className="text-xs text-muted-foreground">{product.code}</p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          {getSaleTypeDisplay(product as Product)}
-                        </TableCell>
-                        <TableCell className="text-sm font-medium text-primary">
-                          {getPriceDisplay(product as Product)}
-                        </TableCell>
-                        <TableCell className="text-sm">{getReadableStock(product as Product)}</TableCell>
-                        {isAdmin && (
-                          <TableCell className="hidden md:table-cell">
-                            <span className={cn(isLowStock ? "badge-low-stock" : "badge-in-stock")}>{isLowStock ? "Bajo" : "OK"}</span>
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="table-header">
+                      <TableHead>Nombre</TableHead>
+                      <TableHead className="hidden sm:table-cell">Tipo</TableHead>
+                      <TableHead>Precio</TableHead>
+                      <TableHead>Stock</TableHead>
+                      {isAdmin && <TableHead className="hidden md:table-cell">Estado</TableHead>}
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedData?.map((product) => {
+                      const isLowStock = product.stock_base_units <= product.low_stock_threshold;
+                      return (
+                        <TableRow key={product.id}>
+                          <TableCell>
+                            <div className="max-w-[150px] sm:max-w-[220px]">
+                              <p className="font-medium truncate">{product.name}</p>
+                              {getEquivalenceDisplay(product as Product) ? (
+                                <p className="text-xs text-primary font-medium">
+                                  {getEquivalenceDisplay(product as Product)}
+                                </p>
+                              ) : (
+                                <p className="text-xs text-muted-foreground">{product.code}</p>
+                              )}
+                            </div>
                           </TableCell>
-                        )}
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => setViewingProduct(product as Product)}><Eye className="w-4 h-4" /></Button>
-                            {isAdmin && <Button variant="ghost" size="icon" onClick={() => handleEdit(product as Product)}><Pencil className="w-4 h-4" /></Button>}
-                            {isAdmin && <Button variant="ghost" size="icon" onClick={() => setDeletingProduct(product as Product)} className="text-destructive hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+                          <TableCell className="hidden sm:table-cell">
+                            {getSaleTypeDisplay(product as Product)}
+                          </TableCell>
+                          <TableCell className="text-sm font-medium text-primary">
+                            {getPriceDisplay(product as Product)}
+                          </TableCell>
+                          <TableCell className="text-sm">{getReadableStock(product as Product)}</TableCell>
+                          {isAdmin && (
+                            <TableCell className="hidden md:table-cell">
+                              <span className={cn(isLowStock ? "badge-low-stock" : "badge-in-stock")}>{isLowStock ? "Bajo" : "OK"}</span>
+                            </TableCell>
+                          )}
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => setViewingProduct(product as Product)}><Eye className="w-4 h-4" /></Button>
+                              {isAdmin && <Button variant="ghost" size="icon" onClick={() => handleEdit(product as Product)}><Pencil className="w-4 h-4" /></Button>}
+                              {isAdmin && <Button variant="ghost" size="icon" onClick={() => setDeletingProduct(product as Product)} className="text-destructive hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+              
+              {totalItems > 0 && (
+                <TablePagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={onPageChange}
+                  onItemsPerPageChange={onItemsPerPageChange}
+                />
+              )}
+            </>
           )}
         </div>
       </div>

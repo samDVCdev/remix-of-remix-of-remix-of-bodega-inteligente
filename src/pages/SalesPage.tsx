@@ -6,7 +6,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { MultiSaleDialog } from "@/components/sales/MultiSaleDialog";
 import { MovementDetailDialog } from "@/components/movements/MovementDetailDialog";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { useMovements, useDeleteMovement } from "@/hooks/useMovements";
+import { usePagination } from "@/hooks/usePagination";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useAuth } from "@/hooks/useAuth";
 import { useBusinessStatus } from "@/hooks/useBusinessStatus";
@@ -25,6 +27,16 @@ export default function SalesPage() {
   const { data: movements, isLoading } = useMovements("salida");
   const deleteMovement = useDeleteMovement();
   const { exchangeRate } = useCurrency();
+
+  const {
+    paginatedData,
+    currentPage,
+    totalPages,
+    totalItems,
+    itemsPerPage,
+    onPageChange,
+    onItemsPerPageChange,
+  } = usePagination(movements, { initialItemsPerPage: 10 });
 
   const handleDelete = async () => {
     if (deletingMovement) {
@@ -85,84 +97,97 @@ export default function SalesPage() {
               </Button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="table-header">
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Producto</TableHead>
-                    <TableHead className="hidden sm:table-cell">Cant.</TableHead>
-                    <TableHead className="hidden md:table-cell">Precio</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {movements?.map((movement) => (
-                    <TableRow 
-                      key={movement.id} 
-                      className="animate-fade-in cursor-pointer hover:bg-muted/50"
-                      onClick={() => setViewingMovement(movement)}
-                    >
-                      <TableCell className="text-xs sm:text-sm">
-                        {format(new Date(movement.movement_date), "dd MMM", { locale: es })}
-                      </TableCell>
-                      <TableCell>
-                        <div className="max-w-[100px] sm:max-w-[150px]">
-                          <p className="font-medium truncate text-sm">{movement.product?.name}</p>
-                          {movement.is_credit && (
-                            <span className="text-xs text-amber-500 font-medium">FIADO</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell text-sm">
-                        {Number(movement.quantity).toFixed(0)}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell text-sm">
-                        <div>
-                          <p>${Number(movement.unit_price).toFixed(2)}</p>
-                          <p className="text-xs text-muted-foreground">Bs. {(Number(movement.unit_price) * exchangeRate).toFixed(2)}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-semibold text-sm">
-                        <div>
-                          <p className="text-primary">${Number(movement.total_amount).toFixed(2)}</p>
-                          <p className="text-xs text-muted-foreground">Bs. {(Number(movement.total_amount) * exchangeRate).toFixed(2)}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setViewingMovement(movement);
-                            }}
-                            className="text-muted-foreground hover:text-foreground"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          {isAdmin && (
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="table-header">
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Producto</TableHead>
+                      <TableHead className="hidden sm:table-cell">Cant.</TableHead>
+                      <TableHead className="hidden md:table-cell">Precio</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedData?.map((movement) => (
+                      <TableRow 
+                        key={movement.id} 
+                        className="animate-fade-in cursor-pointer hover:bg-muted/50"
+                        onClick={() => setViewingMovement(movement)}
+                      >
+                        <TableCell className="text-xs sm:text-sm">
+                          {format(new Date(movement.movement_date), "dd MMM", { locale: es })}
+                        </TableCell>
+                        <TableCell>
+                          <div className="max-w-[100px] sm:max-w-[150px]">
+                            <p className="font-medium truncate text-sm">{movement.product?.name}</p>
+                            {movement.is_credit && (
+                              <span className="text-xs text-amber-500 font-medium">FIADO</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell text-sm">
+                          {Number(movement.quantity).toFixed(0)}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell text-sm">
+                          <div>
+                            <p>${Number(movement.unit_price).toFixed(2)}</p>
+                            <p className="text-xs text-muted-foreground">Bs. {(Number(movement.unit_price) * exchangeRate).toFixed(2)}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-semibold text-sm">
+                          <div>
+                            <p className="text-primary">${Number(movement.total_amount).toFixed(2)}</p>
+                            <p className="text-xs text-muted-foreground">Bs. {(Number(movement.total_amount) * exchangeRate).toFixed(2)}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
                             <Button
                               variant="ghost"
                               size="icon"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setDeletingMovement(movement);
+                                setViewingMovement(movement);
                               }}
-                              className="text-destructive hover:text-destructive"
+                              className="text-muted-foreground hover:text-foreground"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Eye className="w-4 h-4" />
                             </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                            {isAdmin && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeletingMovement(movement);
+                                }}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              
+              {totalItems > 0 && (
+                <TablePagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={onPageChange}
+                  onItemsPerPageChange={onItemsPerPageChange}
+                />
+              )}
+            </>
           )}
         </div>
       </div>

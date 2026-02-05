@@ -8,7 +8,6 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import ProductsPage from "./pages/ProductsPage";
-import EntriesPage from "./pages/EntriesPage";
 import SalesPage from "./pages/SalesPage";
 import POSPage from "./pages/POSPage";
 import ReportsPage from "./pages/ReportsPage";
@@ -33,7 +32,6 @@ const App = () => (
               <Route path="/" element={<ProtectedRoute requireAdmin><Index /></ProtectedRoute>} />
               <Route path="/pos" element={<ProtectedRoute><POSPage /></ProtectedRoute>} />
               <Route path="/productos" element={<ProtectedRoute><ProductsPage /></ProtectedRoute>} />
-              <Route path="/entradas" element={<ProtectedRoute requireAdmin><EntriesPage /></ProtectedRoute>} />
               <Route path="/ventas" element={<ProtectedRoute><SalesPage /></ProtectedRoute>} />
               <Route path="/salidas" element={<ProtectedRoute><SalesPage /></ProtectedRoute>} />
               <Route path="/cuentas-por-cobrar" element={<ProtectedRoute><AccountsReceivablePage /></ProtectedRoute>} />

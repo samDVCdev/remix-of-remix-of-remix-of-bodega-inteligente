@@ -2,7 +2,6 @@ import { Link, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, 
   Package, 
-  ArrowDownToLine, 
   ShoppingCart,
   BarChart3,
   CreditCard,
@@ -20,7 +19,6 @@ const adminNavigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Punto de Venta", href: "/pos", icon: ShoppingCart },
   { name: "Productos", href: "/productos", icon: Package },
-  { name: "Entradas", href: "/entradas", icon: ArrowDownToLine },
   { name: "Historial Ventas", href: "/ventas", icon: ShoppingCart },
   { name: "Cuentas por Cobrar", href: "/cuentas-por-cobrar", icon: CreditCard },
   { name: "Reportes", href: "/reportes", icon: BarChart3 },
