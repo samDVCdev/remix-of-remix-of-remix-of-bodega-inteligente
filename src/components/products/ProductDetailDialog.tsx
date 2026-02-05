@@ -185,12 +185,22 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
           {/* Inventory Value */}
           <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
             <p className="text-sm text-muted-foreground">Valor en Inventario</p>
-            <p className="text-2xl font-display font-bold text-primary">
-              ${(product.sale_price * product.stock_base_units).toFixed(2)}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Bs. {(product.sale_price * product.stock_base_units * exchangeRate).toFixed(2)}
-            </p>
+            {(() => {
+              // For weight products: convert grams to kilos and multiply by price_per_kilo
+              const inventoryValue = product.sale_type === 'weight'
+                ? (product.stock_base_units / 1000) * (product.price_per_kilo || 0)
+                : product.sale_price * product.stock_base_units;
+              return (
+                <>
+                  <p className="text-2xl font-display font-bold text-primary">
+                    ${inventoryValue.toFixed(2)}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Bs. {(inventoryValue * exchangeRate).toFixed(2)}
+                  </p>
+                </>
+              );
+            })()}
           </div>
 
           {/* Dates */}
