@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Search, Package, Download, FileSpreadsheet, Eye, Scale, Layers } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Package, Download, FileSpreadsheet, Eye, Scale, Layers, PackagePlus } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { ProductFormDialog } from "@/components/products/ProductFormDialog";
+import { ProductCreateDialog } from "@/components/products/ProductCreateDialog";
+import { InventoryEntryDialog } from "@/components/products/InventoryEntryDialog";
 import { ProductDetailDialog } from "@/components/products/ProductDetailDialog";
 import { useProductsWithVariants, useDeleteProduct } from "@/hooks/useProducts";
 import { useCurrency } from "@/hooks/useCurrency";
@@ -17,6 +18,7 @@ import { exportProductsToExcel, exportProductsToPDF } from "@/lib/exportUtils";
 export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isInventoryOpen, setIsInventoryOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
@@ -107,7 +109,18 @@ export default function ProductsPage() {
     }
   };
 
+  // Get main package equivalence for display
+  const getMainEquivalence = (product: Product) => {
+    if (!product.equivalences?.length) return null;
+    return product.equivalences.reduce((max, e) => 
+      e.base_unit_multiplier > (max?.base_unit_multiplier || 0) ? e : max,
+      product.equivalences[0]
+    );
+  };
+
   const getReadableStock = (product: Product) => {
+    const mainPackage = getMainEquivalence(product);
+    
     if (product.base_unit === 'gramo') {
       const kilos = Math.floor(product.stock_base_units / 1000);
       const gramos = Math.round(product.stock_base_units % 1000);
@@ -118,7 +131,29 @@ export default function ProductsPage() {
       }
       return `${gramos}g`;
     }
+    
+    // If we have a main package, show in that format
+    if (mainPackage && mainPackage.base_unit_multiplier > 1) {
+      const packages = Math.floor(product.stock_base_units / mainPackage.base_unit_multiplier);
+      const remainder = Math.round(product.stock_base_units % mainPackage.base_unit_multiplier);
+      
+      return (
+        <div>
+          <span className="font-semibold text-primary">{product.stock_base_units} {product.base_unit}</span>
+          <p className="text-xs text-muted-foreground">
+            ≈ {packages.toFixed(1)} {mainPackage.unit_name.toUpperCase()}S
+          </p>
+        </div>
+      );
+    }
+    
     return `${Math.round(product.stock_base_units)} ${product.base_unit}s`;
+  };
+
+  const getEquivalenceDisplay = (product: Product) => {
+    const mainPackage = getMainEquivalence(product);
+    if (!mainPackage || mainPackage.base_unit_multiplier <= 1) return null;
+    return `1 ${mainPackage.unit_name.toUpperCase()} = ${mainPackage.base_unit_multiplier} ${product.base_unit.toUpperCase()}`;
   };
 
   return (
@@ -148,9 +183,13 @@ export default function ProductsPage() {
                   <Download className="w-4 h-4" />
                   <span className="hidden sm:inline">PDF</span>
                 </Button>
+                <Button variant="secondary" onClick={() => setIsInventoryOpen(true)} className="gap-2">
+                  <PackagePlus className="w-4 h-4" />
+                  <span className="hidden sm:inline">Ingreso Inventario</span>
+                </Button>
                 <Button onClick={() => setIsFormOpen(true)} className="gap-2">
                   <Plus className="w-4 h-4" />
-                  <span className="hidden sm:inline">Nuevo</span>
+                  <span className="hidden sm:inline">Nuevo Producto</span>
                 </Button>
               </div>
             )}
@@ -196,9 +235,15 @@ export default function ProductsPage() {
                     return (
                       <TableRow key={product.id}>
                         <TableCell>
-                          <div className="max-w-[120px] sm:max-w-[180px]">
+                          <div className="max-w-[150px] sm:max-w-[220px]">
                             <p className="font-medium truncate">{product.name}</p>
-                            <p className="text-xs text-muted-foreground">{product.code}</p>
+                            {getEquivalenceDisplay(product as Product) ? (
+                              <p className="text-xs text-primary font-medium">
+                                {getEquivalenceDisplay(product as Product)}
+                              </p>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">{product.code}</p>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="hidden sm:table-cell">
@@ -230,7 +275,8 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {isAdmin && <ProductFormDialog open={isFormOpen} onOpenChange={handleFormClose} product={editingProduct} />}
+      {isAdmin && <ProductCreateDialog open={isFormOpen} onOpenChange={handleFormClose} product={editingProduct} />}
+      {isAdmin && <InventoryEntryDialog open={isInventoryOpen} onOpenChange={setIsInventoryOpen} />}
       <ProductDetailDialog open={!!viewingProduct} onOpenChange={() => setViewingProduct(null)} product={viewingProduct} />
 
       <AlertDialog open={!!deletingProduct} onOpenChange={() => setDeletingProduct(null)}>
