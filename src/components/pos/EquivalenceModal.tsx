@@ -19,7 +19,13 @@ export function EquivalenceModal({ open, onOpenChange, product, onConfirm }: Equ
 
   if (!product) return null;
 
-  const hasEquivalences = product.equivalences && product.equivalences.length > 0;
+  // Filter out purchase package equivalences (display_order === 999)
+  // These are only for inventory management, not for sale
+  const saleEquivalences = (product.equivalences || []).filter(
+    eq => eq.display_order !== 999
+  );
+  
+  const hasEquivalences = saleEquivalences.length > 0;
 
   const handleSelectEquivalence = (equivalence: UnitEquivalence | null) => {
     setSelectedEquivalence(equivalence);
@@ -86,7 +92,7 @@ export function EquivalenceModal({ open, onOpenChange, product, onConfirm }: Equ
             </button>
 
             {/* Equivalences options */}
-            {product.equivalences?.map((eq) => (
+            {saleEquivalences.map((eq) => (
               <button
                 key={eq.id}
                 onClick={() => handleSelectEquivalence(eq)}
