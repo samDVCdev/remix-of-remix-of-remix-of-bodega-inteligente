@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Product, UnitEquivalence } from "@/types/inventory";
+import { Product } from "@/types/inventory";
 import { useProductsWithVariants } from "@/hooks/useProducts";
-import { PackagePlus, Search } from "lucide-react";
+import { PackagePlus, Search, Scale, Ruler, Droplets, Package } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -16,11 +16,51 @@ interface InventoryEntryDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+type EntryMode = "package" | "unit" | "measure";
+
+// Get measurement info based on base_unit
+const getMeasurementInfo = (baseUnit: string) => {
+  switch (baseUnit) {
+    case "gramo":
+      return { 
+        measureLabel: "Kilogramos", 
+        measureAbbr: "kg",
+        icon: Scale,
+        multiplier: 1000,
+        type: "weight"
+      };
+    case "centimetro":
+      return { 
+        measureLabel: "Metros", 
+        measureAbbr: "mt",
+        icon: Ruler,
+        multiplier: 100,
+        type: "length"
+      };
+    case "mililitro":
+      return { 
+        measureLabel: "Litros", 
+        measureAbbr: "lt",
+        icon: Droplets,
+        multiplier: 1000,
+        type: "volume"
+      };
+    default:
+      return { 
+        measureLabel: "Unidades", 
+        measureAbbr: "un",
+        icon: Package,
+        multiplier: 1,
+        type: "unit"
+      };
+  }
+};
+
 export function InventoryEntryDialog({ open, onOpenChange }: InventoryEntryDialogProps) {
   const queryClient = useQueryClient();
   const { data: products } = useProductsWithVariants();
   const [selectedProductId, setSelectedProductId] = useState<string>("");
-  const [entryMode, setEntryMode] = useState<"package" | "unit">("package");
+  const [entryMode, setEntryMode] = useState<EntryMode>("package");
   const [selectedEquivalenceId, setSelectedEquivalenceId] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,6 +78,13 @@ export function InventoryEntryDialog({ open, onOpenChange }: InventoryEntryDialo
   const selectedProduct = useMemo(() => {
     return products?.find(p => p.id === selectedProductId) || null;
   }, [products, selectedProductId]);
+
+  const measurementInfo = useMemo(() => {
+    if (!selectedProduct) return getMeasurementInfo("unidad");
+    return getMeasurementInfo(selectedProduct.base_unit);
+  }, [selectedProduct]);
+
+  const isMeasureBasedProduct = measurementInfo.type !== "unit";
 
   const selectedEquivalence = useMemo(() => {
     if (!selectedProduct?.equivalences) return null;
@@ -64,16 +111,26 @@ export function InventoryEntryDialog({ open, onOpenChange }: InventoryEntryDialo
     }
   }, [open]);
 
-  // Set default equivalence when product changes
+  // Set default equivalence and entry mode when product changes
   useEffect(() => {
     if (mainPackage) {
       setSelectedEquivalenceId(mainPackage.id);
     }
-  }, [mainPackage]);
+    // For measure-based products, default to measure entry
+    if (isMeasureBasedProduct) {
+      setEntryMode("measure");
+    } else {
+      setEntryMode("package");
+    }
+  }, [mainPackage, isMeasureBasedProduct]);
 
   const calculateUnitsToAdd = () => {
     if (entryMode === "unit") {
       return quantity;
+    }
+    if (entryMode === "measure") {
+      // Convert from measure unit (kg, mt, lt) to base units (g, cm, ml)
+      return quantity * measurementInfo.multiplier;
     }
     // Package mode
     if (selectedEquivalence) {
@@ -104,23 +161,29 @@ export function InventoryEntryDialog({ open, onOpenChange }: InventoryEntryDialo
 
       if (error) throw error;
 
-      // Record the inventory movement
-      const packageName = entryMode === "package" && selectedEquivalence 
-        ? selectedEquivalence.unit_name 
-        : selectedProduct.base_unit;
+      // Determine package name based on entry mode
+      let packageName = selectedProduct.base_unit;
+      let unitsPerPackage = 1;
 
+      if (entryMode === "package" && selectedEquivalence) {
+        packageName = selectedEquivalence.unit_name;
+        unitsPerPackage = selectedEquivalence.base_unit_multiplier;
+      } else if (entryMode === "measure") {
+        packageName = measurementInfo.measureAbbr;
+        unitsPerPackage = measurementInfo.multiplier;
+      }
+
+      // Record the inventory movement
       await supabase.from("inventory_movements").insert({
         product_id: selectedProduct.id,
         movement_type: "entrada",
-        quantity: quantity,
+        quantity: unitsToAdd, // Store in base units
         unit_price: selectedProduct.purchase_price || 0,
         total_amount: quantity * (selectedProduct.purchase_price || 0),
         package_type: packageName,
-        units_per_package: entryMode === "package" && selectedEquivalence 
-          ? selectedEquivalence.base_unit_multiplier 
-          : 1,
+        units_per_package: unitsPerPackage,
         unit_equivalence_id: entryMode === "package" ? selectedEquivalenceId : null,
-        notes: `Ingreso de ${quantity} ${packageName}(s) = ${unitsToAdd} ${selectedProduct.base_unit}s`,
+        notes: `Ingreso de ${quantity} ${packageName} = ${unitsToAdd} ${selectedProduct.base_unit}s`,
       });
 
       // Invalidate queries to refresh data
@@ -141,6 +204,30 @@ export function InventoryEntryDialog({ open, onOpenChange }: InventoryEntryDialo
     if (!selectedProduct) return "unidades";
     return selectedProduct.base_unit + "s";
   };
+
+  const getReadableStock = () => {
+    if (!selectedProduct) return "";
+    const stock = selectedProduct.stock_base_units;
+    
+    if (isMeasureBasedProduct) {
+      const mainUnits = stock / measurementInfo.multiplier;
+      return `${mainUnits.toFixed(2)} ${measurementInfo.measureAbbr}`;
+    }
+    
+    if (mainPackage && stock > 0) {
+      const packages = Math.floor(stock / mainPackage.base_unit_multiplier);
+      const remainder = Math.round(stock % mainPackage.base_unit_multiplier);
+      if (packages > 0 && remainder > 0) {
+        return `${packages} ${mainPackage.unit_name}(s) + ${remainder} ${selectedProduct.base_unit}s`;
+      } else if (packages > 0) {
+        return `${packages} ${mainPackage.unit_name}(s)`;
+      }
+    }
+    
+    return `${stock} ${getBaseUnitLabel()}`;
+  };
+
+  const MeasureIcon = measurementInfo.icon;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -168,26 +255,42 @@ export function InventoryEntryDialog({ open, onOpenChange }: InventoryEntryDialo
             </div>
             <Select value={selectedProductId} onValueChange={setSelectedProductId}>
               <SelectTrigger className="h-12">
-                <SelectValue placeholder="Buscar..." />
+                <SelectValue placeholder="Seleccionar producto..." />
               </SelectTrigger>
               <SelectContent className="bg-popover max-h-60">
-                {filteredProducts.map((product) => (
-                  <SelectItem key={product.id} value={product.id}>
-                    {product.name} ({product.code})
-                  </SelectItem>
-                ))}
+                {filteredProducts.map((product) => {
+                  const info = getMeasurementInfo(product.base_unit);
+                  const Icon = info.icon;
+                  return (
+                    <SelectItem key={product.id} value={product.id}>
+                      <div className="flex items-center gap-2">
+                        <Icon className="w-4 h-4 text-muted-foreground" />
+                        {product.name} ({product.code})
+                      </div>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
 
           {selectedProduct && (
             <>
+              {/* Product Type Indicator */}
+              <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg">
+                <MeasureIcon className="w-5 h-5 text-primary" />
+                <span className="text-sm font-medium">
+                  Producto vendido por {measurementInfo.measureLabel.toLowerCase()}
+                </span>
+              </div>
+
               {/* Entry Mode Toggle */}
               <div className="space-y-2">
                 <Label className="text-xs uppercase text-muted-foreground tracking-wider">
                   Modo de Ingreso
                 </Label>
                 <div className="flex border rounded-lg overflow-hidden">
+                  {/* Package mode - always available */}
                   <Button
                     type="button"
                     variant={entryMode === "package" ? "default" : "ghost"}
@@ -196,6 +299,20 @@ export function InventoryEntryDialog({ open, onOpenChange }: InventoryEntryDialo
                   >
                     Por {mainPackage?.unit_name || "Bultos"}
                   </Button>
+                  
+                  {/* Measure mode - only for measure-based products */}
+                  {isMeasureBasedProduct && (
+                    <Button
+                      type="button"
+                      variant={entryMode === "measure" ? "default" : "ghost"}
+                      className="flex-1 rounded-none h-12"
+                      onClick={() => setEntryMode("measure")}
+                    >
+                      Por {measurementInfo.measureLabel}
+                    </Button>
+                  )}
+                  
+                  {/* Unit mode - for unit-based products or direct base unit entry */}
                   <Button
                     type="button"
                     variant={entryMode === "unit" ? "default" : "ghost"}
@@ -231,12 +348,12 @@ export function InventoryEntryDialog({ open, onOpenChange }: InventoryEntryDialo
               {/* Quantity Input */}
               <div className="space-y-2">
                 <Label className="text-xs uppercase text-muted-foreground tracking-wider">
-                  Cantidad a Sumar
+                  Cantidad a Sumar {entryMode === "measure" && `(${measurementInfo.measureAbbr.toUpperCase()})`}
                 </Label>
                 <Input
                   type="number"
                   min="0"
-                  step="1"
+                  step={entryMode === "measure" ? "0.01" : "1"}
                   value={quantity}
                   onChange={(e) => setQuantity(Number(e.target.value))}
                   className="h-14 text-2xl text-center font-bold"
@@ -244,7 +361,7 @@ export function InventoryEntryDialog({ open, onOpenChange }: InventoryEntryDialo
                 />
                 {quantity > 0 && (
                   <p className="text-sm text-muted-foreground text-center">
-                    = <span className="font-semibold text-primary">{calculateUnitsToAdd()}</span> {getBaseUnitLabel()} a agregar
+                    = <span className="font-semibold text-primary">{calculateUnitsToAdd().toLocaleString()}</span> {getBaseUnitLabel()} a agregar
                   </p>
                 )}
               </div>
@@ -253,12 +370,10 @@ export function InventoryEntryDialog({ open, onOpenChange }: InventoryEntryDialo
               <div className="p-3 bg-muted/30 rounded-lg text-center">
                 <p className="text-sm text-muted-foreground">Stock actual</p>
                 <p className="text-lg font-bold">
-                  {selectedProduct.stock_base_units} {getBaseUnitLabel()}
-                  {mainPackage && selectedProduct.stock_base_units > 0 && (
-                    <span className="text-muted-foreground font-normal text-sm ml-2">
-                      (≈ {(selectedProduct.stock_base_units / mainPackage.base_unit_multiplier).toFixed(1)} {mainPackage.unit_name}s)
-                    </span>
-                  )}
+                  {getReadableStock()}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  ({selectedProduct.stock_base_units.toLocaleString()} {getBaseUnitLabel()} en total)
                 </p>
               </div>
             </>
@@ -267,7 +382,7 @@ export function InventoryEntryDialog({ open, onOpenChange }: InventoryEntryDialo
           <Button
             onClick={handleSubmit}
             disabled={!selectedProduct || quantity <= 0 || isSubmitting}
-            className="w-full h-14 gap-2 text-base font-semibold bg-foreground text-background hover:bg-foreground/90"
+            className="w-full h-14 gap-2 text-base font-semibold"
           >
             <PackagePlus className="w-5 h-5" />
             Confirmar Carga
