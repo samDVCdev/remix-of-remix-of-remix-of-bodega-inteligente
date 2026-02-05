@@ -57,20 +57,20 @@ export default function POSPage() {
         break;
       default:
         // For unit products:
-        // - If NO equivalences: add directly with base unit
-        // - If 1 equivalence only: add directly with that equivalence
-        // - If 2+ equivalences: show modal to choose
-        const equivalences = product.equivalences || [];
+        // Filter out purchase package equivalences (display_order === 999)
+        // These are only for inventory management, not for sale
+        const saleEquivalences = (product.equivalences || []).filter(
+          eq => eq.display_order !== 999
+        );
         
-        if (equivalences.length === 0) {
-          // No equivalences, add base unit directly
+        if (saleEquivalences.length === 0) {
+          // No sale equivalences, add base unit directly using sale_price
           addUnitProduct(product, null, 1);
-        } else if (equivalences.length === 1) {
-          // Only 1 equivalence option besides base unit = 2 options total
-          // Show modal to let user choose between base unit or the equivalence
-          setUnitProduct(product);
+        } else if (saleEquivalences.length === 1) {
+          // Only 1 sale presentation defined - add directly without modal
+          addUnitProduct(product, saleEquivalences[0], 1);
         } else {
-          // Multiple equivalences, show modal
+          // Multiple sale equivalences (2+), show modal to choose
           setUnitProduct(product);
         }
         break;
