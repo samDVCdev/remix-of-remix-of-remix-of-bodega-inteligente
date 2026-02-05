@@ -8,7 +8,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { useAccountsReceivable, useMarkAsPaid, useRegisterPartialPayment } from "@/hooks/useAccountsReceivable";
+import { usePagination } from "@/hooks/usePagination";
 import { useCurrency } from "@/hooks/useCurrency";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -45,6 +47,16 @@ export default function AccountsReceivablePage() {
       a.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
       a.product_name?.toLowerCase().includes(search.toLowerCase())
   );
+
+  const {
+    paginatedData,
+    currentPage,
+    totalPages,
+    totalItems,
+    itemsPerPage,
+    onPageChange,
+    onItemsPerPageChange,
+  } = usePagination(filteredAccounts, { initialItemsPerPage: 10 });
 
   const totalPending = accounts?.reduce((sum, a) => sum + Number(a.amount_due || a.total_amount), 0) || 0;
 
@@ -110,77 +122,90 @@ export default function AccountsReceivablePage() {
               <p className="text-muted-foreground">No hay cuentas pendientes</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="table-header">
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead className="hidden sm:table-cell">Producto</TableHead>
-                    <TableHead className="hidden lg:table-cell">Progreso</TableHead>
-                    <TableHead>Debe</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAccounts?.map((account) => {
-                    const amountDue = Number(account.amount_due || account.total_amount);
-                    const amountPaid = Number(account.amount_paid || 0);
-                    const progress = getPaymentProgress(account);
-                    
-                    return (
-                      <TableRow key={account.id}>
-                        <TableCell className="text-xs">
-                          {format(new Date(account.movement_date), "dd MMM", { locale: es })}
-                        </TableCell>
-                        <TableCell className="font-medium max-w-[100px] truncate">
-                          {account.customer_name || "Sin nombre"}
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell max-w-[120px] truncate">
-                          {account.product_name}
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell">
-                          <div className="space-y-1">
-                            <Progress value={progress} className="h-2" />
-                            <p className="text-xs text-muted-foreground">
-                              {formatPrice(amountPaid)} de {formatPrice(Number(account.total_amount))}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-semibold text-amber-500 text-sm">
-                          {formatPrice(amountDue)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => {
-                                setPaymentAccount(account);
-                                setPaymentAmount("");
-                              }}
-                              className="gap-1 text-blue-600 border-blue-600 hover:bg-blue-50 px-2"
-                            >
-                              <DollarSign className="w-4 h-4" />
-                              <span className="hidden sm:inline">Abonar</span>
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => setPayingId(account.id)}
-                              className="gap-1 text-green-600 border-green-600 hover:bg-green-50 px-2"
-                            >
-                              <Check className="w-4 h-4" />
-                              <span className="hidden sm:inline">Pagar</span>
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="table-header">
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead className="hidden sm:table-cell">Producto</TableHead>
+                      <TableHead className="hidden lg:table-cell">Progreso</TableHead>
+                      <TableHead>Debe</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedData?.map((account) => {
+                      const amountDue = Number(account.amount_due || account.total_amount);
+                      const amountPaid = Number(account.amount_paid || 0);
+                      const progress = getPaymentProgress(account);
+                      
+                      return (
+                        <TableRow key={account.id}>
+                          <TableCell className="text-xs">
+                            {format(new Date(account.movement_date), "dd MMM", { locale: es })}
+                          </TableCell>
+                          <TableCell className="font-medium max-w-[100px] truncate">
+                            {account.customer_name || "Sin nombre"}
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell max-w-[120px] truncate">
+                            {account.product_name}
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell">
+                            <div className="space-y-1">
+                              <Progress value={progress} className="h-2" />
+                              <p className="text-xs text-muted-foreground">
+                                {formatPrice(amountPaid)} de {formatPrice(Number(account.total_amount))}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-semibold text-amber-500 text-sm">
+                            {formatPrice(amountDue)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => {
+                                  setPaymentAccount(account);
+                                  setPaymentAmount("");
+                                }}
+                                className="gap-1 text-blue-600 border-blue-600 hover:bg-blue-50 px-2"
+                              >
+                                <DollarSign className="w-4 h-4" />
+                                <span className="hidden sm:inline">Abonar</span>
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => setPayingId(account.id)}
+                                className="gap-1 text-green-600 border-green-600 hover:bg-green-50 px-2"
+                              >
+                                <Check className="w-4 h-4" />
+                                <span className="hidden sm:inline">Pagar</span>
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+              
+              {totalItems > 0 && (
+                <TablePagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={onPageChange}
+                  onItemsPerPageChange={onItemsPerPageChange}
+                />
+              )}
+            </>
           )}
         </div>
       </div>

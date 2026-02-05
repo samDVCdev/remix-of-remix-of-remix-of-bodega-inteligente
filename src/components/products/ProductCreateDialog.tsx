@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -25,7 +25,7 @@ type MeasurementType = typeof MEASUREMENT_TYPES[number]["value"];
 
 const salePriceSchema = z.object({
   unit_name: z.string().min(1, "Nombre requerido"),
-  base_unit_multiplier: z.coerce.number().min(0.01, "Mínimo 0.01"),
+  base_unit_multiplier: z.coerce.number().min(1, "Mínimo 1"),
   price: z.coerce.number().min(0, "Precio debe ser >= 0"),
 });
 
@@ -34,7 +34,7 @@ const productSchema = z.object({
   measurement_type: z.enum(["unit", "weight", "length", "volume"]),
   // Empaque de compra
   purchase_package_name: z.string().min(1, "Nombre del empaque requerido"),
-  purchase_package_content: z.coerce.number().min(0.01, "Mínimo 0.01"),
+  purchase_package_content: z.coerce.number().min(0.001, "Mínimo 0.001"),
   purchase_price: z.coerce.number().min(0, "Precio debe ser >= 0"),
   initial_stock_packages: z.coerce.number().min(0, "Mínimo 0"),
   // Para productos por peso/longitud/volumen: precio por unidad de medida
@@ -78,6 +78,7 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
 
   const measurementType = form.watch("measurement_type");
   const pricePerMeasure = form.watch("price_per_measure_unit") || 0;
+  const purchasePackageName = form.watch("purchase_package_name");
 
   const getMeasurementConfig = (type: MeasurementType) => {
     switch (type) {
@@ -121,10 +122,16 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
 
   useEffect(() => {
     if (product) {
+      // Find the largest equivalence (purchase package)
       const purchaseEquiv = product.equivalences?.reduce((max, e) => 
         e.base_unit_multiplier > (max?.base_unit_multiplier || 0) ? e : max, 
         product.equivalences[0]
       );
+      
+      // Sale equivalences are everything except the purchase package
+      const saleEquivalences = product.equivalences?.filter(e => 
+        e.id !== purchaseEquiv?.id
+      ) || [];
       
       // Determine measurement type from base_unit
       let measType: MeasurementType = "unit";
@@ -132,19 +139,23 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
       else if (product.base_unit === "centimetro") measType = "length";
       else if (product.base_unit === "mililitro") measType = "volume";
       
+      const measureConfig = getMeasurementConfig(measType);
+      
       form.reset({
         name: product.name,
         measurement_type: measType,
         purchase_package_name: purchaseEquiv?.unit_name || "Bulto",
-        purchase_package_content: purchaseEquiv?.base_unit_multiplier || 1,
+        purchase_package_content: purchaseEquiv ? purchaseEquiv.base_unit_multiplier / measureConfig.multiplier : 1,
         purchase_price: product.purchase_price,
         initial_stock_packages: 0,
         price_per_measure_unit: product.price_per_kilo || 0,
-        sale_prices: product.equivalences?.length ? product.equivalences.map(e => ({
-          unit_name: e.unit_name,
-          base_unit_multiplier: e.base_unit_multiplier,
-          price: e.price,
-        })) : [{ unit_name: "Unidad", base_unit_multiplier: 1, price: product.sale_price }],
+        sale_prices: saleEquivalences.length > 0 
+          ? saleEquivalences.map(e => ({
+              unit_name: e.unit_name,
+              base_unit_multiplier: e.base_unit_multiplier,
+              price: e.price,
+            }))
+          : [{ unit_name: "Unidad", base_unit_multiplier: 1, price: product.sale_price }],
       });
     } else {
       form.reset({
@@ -176,8 +187,11 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
       let saleType: 'unit' | 'weight' = 'unit';
       let pricePerKilo = 0;
 
+      // Calculate purchase package multiplier in base units
+      const packageMultiplier = data.purchase_package_content * measureConfig.multiplier;
+
       if (data.measurement_type === "unit") {
-        // Products sold by unit - use sale prices
+        // Products sold by unit - use sale prices (SEPARATE from purchase package)
         equivalences = (data.sale_prices || []).map((sp, index) => ({
           unit_name: sp.unit_name,
           base_unit_multiplier: sp.base_unit_multiplier,
@@ -193,13 +207,12 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
         salePrice = pricePerKilo;
       }
 
-      // Add purchase package as equivalence
-      const packageMultiplier = data.purchase_package_content * measureConfig.multiplier;
+      // Add purchase package as a separate equivalence (ONLY for inventory management, NOT for sale)
       equivalences.push({
         unit_name: data.purchase_package_name,
         base_unit_multiplier: packageMultiplier,
-        price: data.purchase_price,
-        display_order: equivalences.length,
+        price: data.purchase_price, // This is purchase price, not sale price
+        display_order: 999, // Put at end to differentiate
       });
 
       // Calculate initial stock in base units
@@ -292,6 +305,13 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
 
             {/* Purchase Package Section */}
             <div className="p-4 bg-muted/30 rounded-lg border space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Package className="w-4 h-4 text-muted-foreground" />
+                <Label className="text-xs uppercase text-muted-foreground tracking-wider font-semibold">
+                  Configuración de Compra (Empaque)
+                </Label>
+              </div>
+              
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -322,7 +342,7 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs uppercase text-primary font-semibold tracking-wider">
-                        Stock Inicial (Bultos)
+                        Stock Inicial ({purchasePackageName}s)
                       </FormLabel>
                       <FormControl>
                         <Input 
@@ -347,7 +367,7 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs uppercase text-muted-foreground tracking-wider">
-                        Empaque (Bulto/Caja)
+                        Empaque (Bulto/Caja/Saco)
                       </FormLabel>
                       <FormControl>
                         <Input placeholder="Ej: Saco" className="h-12" {...field} />
@@ -369,7 +389,7 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
                         <Input 
                           type="number" 
                           step={isMeasureBasedSale ? "0.01" : "1"}
-                          min="0.01" 
+                          min={isMeasureBasedSale ? "0.01" : "1"}
                           placeholder="Ej: 50" 
                           className="h-12"
                           {...field} 
@@ -389,7 +409,7 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
               <div className="flex items-center gap-2">
                 <span className="text-primary">$</span>
                 <Label className="text-xs uppercase text-muted-foreground tracking-wider font-semibold">
-                  Definición de Venta
+                  Definición de Venta (Precios al Cliente)
                 </Label>
               </div>
 
@@ -448,7 +468,7 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs uppercase text-muted-foreground tracking-wider">
-                      Presentaciones (Unidad, Caja, Media...)
+                      Presentaciones de Venta (Unidad, Caja, Media...)
                     </span>
                     <Button
                       type="button"
@@ -461,6 +481,11 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
                       Añadir Otra
                     </Button>
                   </div>
+
+                  <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                    💡 Define aquí las presentaciones para VENDER (Ej: Unidad, Media Docena, Docena). 
+                    El empaque de compra ({purchasePackageName}) es solo para control de inventario.
+                  </p>
 
                   {salePriceFields.map((field, index) => (
                     <div key={field.id} className="flex gap-2 items-center bg-muted/30 p-3 rounded-lg">
@@ -477,6 +502,7 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
                         <Input
                           type="number"
                           min="1"
+                          step="1"
                           placeholder="1"
                           className="h-10 mt-1"
                           {...form.register(`sale_prices.${index}.base_unit_multiplier`)}
