@@ -49,18 +49,29 @@ export default function POSPage() {
 
     switch (product.sale_type) {
       case 'weight':
+        // Weight products always show modal to input grams
         setWeightProduct(product);
         break;
       case 'variants':
         setVariantProduct(product);
         break;
       default:
-        // For unit products, show the equivalence modal if they have equivalences
-        // Otherwise add directly
-        if (product.equivalences && product.equivalences.length > 0) {
+        // For unit products:
+        // - If NO equivalences: add directly with base unit
+        // - If 1 equivalence only: add directly with that equivalence
+        // - If 2+ equivalences: show modal to choose
+        const equivalences = product.equivalences || [];
+        
+        if (equivalences.length === 0) {
+          // No equivalences, add base unit directly
+          addUnitProduct(product, null, 1);
+        } else if (equivalences.length === 1) {
+          // Only 1 equivalence option besides base unit = 2 options total
+          // Show modal to let user choose between base unit or the equivalence
           setUnitProduct(product);
         } else {
-          addUnitProduct(product, null, 1);
+          // Multiple equivalences, show modal
+          setUnitProduct(product);
         }
         break;
     }
