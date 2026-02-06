@@ -66,8 +66,9 @@ export function useGroupedAccountsReceivable() {
       const groupMap = new Map<string, GroupedAccount>();
       
       accounts.forEach((account) => {
-        // Use credit_group_id if available, otherwise use the individual account id
-        const groupKey = account.credit_group_id || account.id;
+        // Use credit_group_id if available, otherwise group by customer_name + movement_date
+        const groupKey = account.credit_group_id 
+          || `${account.customer_name || 'unknown'}_${account.movement_date}`;
         
         const existing = groupMap.get(groupKey);
         if (existing) {

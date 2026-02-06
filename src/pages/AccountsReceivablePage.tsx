@@ -143,6 +143,11 @@ export default function AccountsReceivablePage() {
                                   ? group.items[0].product_name 
                                   : `${group.items.length} productos`}
                               </span>
+                              {group.items.length > 1 && (
+                                <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-semibold">
+                                  {group.items.length}
+                                </span>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell className="hidden lg:table-cell">
@@ -222,7 +227,7 @@ function PaymentModalWithDetails({
       
       <div className="relative z-10 w-full max-w-4xl mx-4 grid grid-cols-1 lg:grid-cols-[1fr,1.2fr] rounded-3xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]">
         {/* LEFT - Product Details */}
-        <div className="bg-muted/50 p-6 border-r border-border overflow-y-auto">
+        <div className="bg-card p-6 border-r border-border overflow-y-auto">
           <h3 className="text-lg font-bold mb-1">{group.customerName}</h3>
           <p className="text-xs text-muted-foreground mb-4">
             {format(new Date(group.movementDate), "dd 'de' MMMM, yyyy", { locale: es })}
