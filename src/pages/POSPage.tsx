@@ -7,6 +7,7 @@ import { WeightModal } from "@/components/pos/WeightModal";
 import { VariantModal } from "@/components/pos/VariantModal";
 import { EquivalenceModal } from "@/components/pos/EquivalenceModal";
 import { CreditSaleModal } from "@/components/pos/CreditSaleModal";
+import { PaymentModal, Payment } from "@/components/pos/PaymentModal";
 import { useProductsWithVariants } from "@/hooks/useProducts";
 import { useCart } from "@/hooks/useCart";
 import { useCreateMovement } from "@/hooks/useMovements";
@@ -23,6 +24,7 @@ export default function POSPage() {
   const [variantProduct, setVariantProduct] = useState<Product | null>(null);
   const [unitProduct, setUnitProduct] = useState<Product | null>(null);
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   const { data: products, isLoading } = useProductsWithVariants();
   const { isAdmin } = useAuth();
@@ -89,7 +91,7 @@ export default function POSPage() {
     addUnitProduct(product, equivalence, quantity);
   };
 
-  const processSale = async (isCredit: boolean, customerName?: string) => {
+  const processSale = async (isCredit: boolean, customerName?: string, paymentNotes?: string) => {
     if (items.length === 0) return;
 
     if (!isAdmin && businessStatus && !businessStatus.is_open) {
@@ -124,11 +126,14 @@ export default function POSPage() {
           unit_price: item.unit_price,
           movement_date: new Date().toISOString().split("T")[0],
           movement_type: "salida",
-          notes: item.equivalence 
-            ? `Equivalencia: ${item.equivalence.unit_name} x${item.quantity}` 
-            : item.variant 
-              ? `Variante: ${item.variant.name} x${item.quantity}` 
-              : undefined,
+          notes: [
+            item.equivalence 
+              ? `Equivalencia: ${item.equivalence.unit_name} x${item.quantity}` 
+              : item.variant 
+                ? `Variante: ${item.variant.name} x${item.quantity}` 
+                : undefined,
+            paymentNotes
+          ].filter(Boolean).join(' — ') || undefined,
           is_credit: isCredit,
           customer_name: isCredit ? customerName : undefined,
           sold_by: user?.id,
@@ -149,7 +154,22 @@ export default function POSPage() {
   };
 
   const handleCheckout = () => {
-    processSale(false);
+    setIsCartOpen(false);
+    setIsPaymentModalOpen(true);
+  };
+
+  const handlePaymentConfirm = (payments: Payment[]) => {
+    // Build notes from payment details
+    const paymentNotes = payments.map(p => {
+      const method = p.method === 'cash_usd' ? 'Efectivo $' : 
+                     p.method === 'cash_bs' ? 'Efectivo Bs' :
+                     p.method === 'card_bs' ? 'Tarjeta Bs' : 'Transferencia Bs';
+      const ref = p.reference ? ` (Ref: ${p.reference})` : '';
+      return `${method}: $${p.amountUsd.toFixed(2)}${ref}`;
+    }).join(' | ');
+
+    processSale(false, undefined, paymentNotes);
+    setIsPaymentModalOpen(false);
   };
 
   const handleCreditSale = () => {
@@ -243,6 +263,14 @@ export default function POSPage() {
         onOpenChange={(open) => !open && setUnitProduct(null)}
         product={unitProduct}
         onConfirm={handleEquivalenceConfirm}
+      />
+
+      {/* Payment Modal */}
+      <PaymentModal
+        open={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        totalUsd={getTotal()}
+        onConfirm={handlePaymentConfirm}
       />
 
       {/* Credit Sale Modal */}
