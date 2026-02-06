@@ -20,7 +20,9 @@ export default function AccountsReceivablePage() {
   
   const { data: groupedAccounts, isLoading } = useGroupedAccountsReceivable();
   const registerPayment = useRegisterGroupPayment();
-  const { formatPrice } = useCurrency();
+  const { formatPrice, exchangeRate } = useCurrency();
+
+  const dualPrice = (usd: number) => `$${usd.toFixed(2)} / Bs. ${(usd * exchangeRate).toFixed(2)}`;
 
   const filteredAccounts = groupedAccounts?.filter(
     (g) =>
@@ -83,9 +85,10 @@ export default function AccountsReceivablePage() {
           </div>
           <div className="stat-card p-3 sm:p-4 bg-amber-500/10 border-amber-500/20">
             <p className="text-xs sm:text-sm text-muted-foreground">Total Pendiente</p>
-            <p className="text-xl sm:text-2xl font-display font-bold text-amber-500 truncate">
-              {formatPrice(totalPending)}
+            <p className="text-lg sm:text-xl font-display font-bold text-amber-500 truncate">
+              ${totalPending.toFixed(2)}
             </p>
+            <p className="text-xs text-muted-foreground">Bs. {(totalPending * exchangeRate).toFixed(2)}</p>
           </div>
         </div>
 
@@ -154,12 +157,13 @@ export default function AccountsReceivablePage() {
                             <div className="space-y-1">
                               <Progress value={progress} className="h-2" />
                               <p className="text-xs text-muted-foreground">
-                                {formatPrice(group.amountPaid)} de {formatPrice(group.totalAmount)}
+                                {dualPrice(group.amountPaid)} de {dualPrice(group.totalAmount)}
                               </p>
                             </div>
                           </TableCell>
                           <TableCell className="font-semibold text-amber-500 text-sm">
-                            {formatPrice(group.amountDue)}
+                            <p>${group.amountDue.toFixed(2)}</p>
+                            <p className="text-xs text-muted-foreground font-normal">Bs. {(group.amountDue * exchangeRate).toFixed(2)}</p>
                           </TableCell>
                           <TableCell className="text-right">
                             <Button 
@@ -219,7 +223,8 @@ function PaymentModalWithDetails({
   group: GroupedAccount;
   onConfirm: (payments: Payment[]) => void;
 }) {
-  const { formatPrice, exchangeRate } = useCurrency();
+  const { exchangeRate } = useCurrency();
+  const dualPrice = (usd: number) => `$${usd.toFixed(2)} / Bs. ${(usd * exchangeRate).toFixed(2)}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -248,9 +253,10 @@ function PaymentModalWithDetails({
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="font-semibold text-sm">{formatPrice(Number(item.total_amount))}</p>
+                    <p className="font-semibold text-sm">${Number(item.total_amount).toFixed(2)}</p>
+                    <p className="text-[10px] text-muted-foreground">Bs. {(Number(item.total_amount) * exchangeRate).toFixed(2)}</p>
                     <p className="text-xs text-muted-foreground">
-                      Pagado: {formatPrice(Number(item.amount_paid || 0))}
+                      Pagado: ${Number(item.amount_paid || 0).toFixed(2)}
                     </p>
                   </div>
                 </div>
@@ -261,15 +267,15 @@ function PaymentModalWithDetails({
           <div className="mt-4 pt-4 border-t border-border">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Total Compra:</span>
-              <span className="font-bold">{formatPrice(group.totalAmount)}</span>
+              <span className="font-bold">{dualPrice(group.totalAmount)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Ya Pagado:</span>
-              <span className="font-medium text-primary">{formatPrice(group.amountPaid)}</span>
+              <span className="font-medium text-primary">{dualPrice(group.amountPaid)}</span>
             </div>
             <div className="flex justify-between text-base mt-2 pt-2 border-t border-border">
               <span className="font-semibold">Saldo Pendiente:</span>
-              <span className="font-bold text-amber-500">{formatPrice(group.amountDue)}</span>
+              <span className="font-bold text-amber-500">{dualPrice(group.amountDue)}</span>
             </div>
           </div>
         </div>
