@@ -51,7 +51,6 @@ export function useDebtorsSummary() {
       
       const accounts = data as unknown as AccountReceivable[];
       
-      // Group by customer
       const debtorMap = new Map<string, DebtorSummary>();
       
       accounts.forEach((account) => {
@@ -71,7 +70,6 @@ export function useDebtorsSummary() {
         }
       });
       
-      // Calculate percentages and sort
       const debtors = Array.from(debtorMap.values())
         .map((d) => ({
           ...d,
@@ -86,99 +84,73 @@ export function useDebtorsSummary() {
   });
 }
 
-export function useMarkAsPaid() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (id: string) => {
-      // Get current movement to update amount_paid
-      const { data: movement } = await supabase
-        .from("inventory_movements")
-        .select("total_amount")
-        .eq("id", id)
-        .single();
-
-      const { error } = await supabase
-        .from("inventory_movements")
-        .update({ 
-          is_paid: true,
-          amount_paid: movement?.total_amount || 0
-        })
-        .eq("id", id);
-      
-      if (error) throw error;
-
-      // Log audit event
-      const { data: { user } } = await supabase.auth.getUser();
-      await supabase
-        .from("audit_logs" as any)
-        .insert({
-          action: 'PAYMENT_REGISTERED',
-          entity_type: 'inventory_movements',
-          entity_id: id,
-          user_id: user?.id,
-          details: { movement_id: id }
-        });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["accounts-receivable"] });
-      queryClient.invalidateQueries({ queryKey: ["debtors-summary"] });
-      queryClient.invalidateQueries({ queryKey: ["movements"] });
-      toast.success("Pago registrado exitosamente");
-    },
-    onError: () => {
-      toast.error("Error al registrar el pago");
-    },
-  });
-}
-
 export function useRegisterPartialPayment() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, amount }: { id: string; amount: number }) => {
-      // Get current movement using raw query
-      const { data: movements } = await supabase
+    mutationFn: async ({ id, amount, notes }: { id: string; amount: number; notes?: string }) => {
+      // Get current movement
+      const { data: movements, error: fetchError } = await supabase
         .from("inventory_movements")
         .select("*")
         .eq("id", id);
 
+      if (fetchError) throw fetchError;
+      
       const movement = movements?.[0] as any;
       if (!movement) throw new Error("Movimiento no encontrado");
 
       const currentPaid = Number(movement.amount_paid || 0);
-      const newAmountPaid = currentPaid + amount;
-      const isPaid = newAmountPaid >= Number(movement.total_amount);
+      const totalAmount = Number(movement.total_amount);
+      const newAmountPaid = Math.min(currentPaid + amount, totalAmount);
+      const isPaid = newAmountPaid >= totalAmount - 0.005; // floating point tolerance
 
-      const { error } = await supabase
+      const updateData: Record<string, any> = { 
+        amount_paid: newAmountPaid,
+        is_paid: isPaid,
+      };
+      
+      if (notes) {
+        const existingNotes = movement.notes || "";
+        updateData.notes = existingNotes 
+          ? `${existingNotes} | ${notes}` 
+          : notes;
+      }
+
+      const { error, count } = await supabase
         .from("inventory_movements")
-        .update({ 
-          amount_paid: newAmountPaid,
-          is_paid: isPaid
-        } as any)
+        .update(updateData as any)
         .eq("id", id);
       
       if (error) throw error;
 
       // Log audit event
-      const { data: { user } } = await supabase.auth.getUser();
-      await supabase
-        .from("audit_logs" as any)
-        .insert({
-          action: 'PARTIAL_PAYMENT_REGISTERED',
-          entity_type: 'inventory_movements',
-          entity_id: id,
-          user_id: user?.id,
-          details: { movement_id: id, amount }
-        });
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase
+          .from("audit_logs" as any)
+          .insert({
+            action: isPaid ? 'PAYMENT_COMPLETED' : 'PARTIAL_PAYMENT_REGISTERED',
+            entity_type: 'inventory_movements',
+            entity_id: id,
+            user_id: user?.id,
+            details: { movement_id: id, amount, new_total_paid: newAmountPaid, fully_paid: isPaid }
+          });
+      } catch (e) {
+        // Don't fail the payment if audit log fails
+        console.error("Audit log error:", e);
+      }
+
+      return { isPaid, newAmountPaid };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["accounts-receivable"] });
       queryClient.invalidateQueries({ queryKey: ["debtors-summary"] });
       queryClient.invalidateQueries({ queryKey: ["movements"] });
-      toast.success("Abono registrado exitosamente");
+      toast.success(result.isPaid ? "Deuda saldada completamente" : "Abono registrado exitosamente");
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Payment error:", error);
       toast.error("Error al registrar el abono");
     },
   });
