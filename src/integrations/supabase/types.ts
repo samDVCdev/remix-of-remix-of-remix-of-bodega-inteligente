@@ -78,6 +78,7 @@ export type Database = {
         Row: {
           amount_paid: number
           created_at: string
+          credit_group_id: string | null
           customer_name: string | null
           id: string
           is_credit: boolean
@@ -97,6 +98,7 @@ export type Database = {
         Insert: {
           amount_paid?: number
           created_at?: string
+          credit_group_id?: string | null
           customer_name?: string | null
           id?: string
           is_credit?: boolean
@@ -116,6 +118,7 @@ export type Database = {
         Update: {
           amount_paid?: number
           created_at?: string
+          credit_group_id?: string | null
           customer_name?: string | null
           id?: string
           is_credit?: boolean

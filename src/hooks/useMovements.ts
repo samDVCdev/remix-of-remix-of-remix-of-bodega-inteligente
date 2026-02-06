@@ -36,6 +36,7 @@ interface CreateMovementData {
   customer_name?: string;
   sold_by?: string;
   unit_equivalence_id?: string;
+  credit_group_id?: string;
 }
 
 export function useCreateMovement() {
@@ -59,8 +60,9 @@ export function useCreateMovement() {
           customer_name: data.customer_name,
           sold_by: data.sold_by,
           unit_equivalence_id: data.unit_equivalence_id,
+          credit_group_id: data.credit_group_id,
           total_amount,
-        })
+        } as any)
         .select()
         .single();
       
