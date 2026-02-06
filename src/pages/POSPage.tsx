@@ -129,6 +129,7 @@ export default function POSPage() {
           product_id: item.product.id,
           quantity: quantityInBaseUnits,
           unit_price: item.unit_price,
+          total_amount: item.total,
           movement_date: new Date().toISOString().split("T")[0],
           movement_type: "salida",
           notes: [
