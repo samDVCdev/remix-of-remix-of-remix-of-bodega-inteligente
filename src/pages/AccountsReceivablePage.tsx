@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { CreditCard, Search, DollarSign, Package, X, Banknote, Coins, CreditCard as CreditCardIcon, Smartphone, Trash2, Plus, CheckCircle, Eye } from "lucide-react";
+import { CreditCard, Search, DollarSign, Package, X, Banknote, Coins, CreditCard as CreditCardIcon, Smartphone, Trash2, Plus, CheckCircle, Eye, Loader2 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -242,6 +242,7 @@ export default function AccountsReceivablePage() {
           onClose={() => setPaymentGroup(null)}
           group={paymentGroup}
           onConfirm={handlePaymentConfirm}
+          isLoading={registerPayment.isPending}
         />
       )}
 
@@ -262,11 +263,13 @@ function PaymentModalWithDetails({
   onClose,
   group,
   onConfirm,
+  isLoading,
 }: {
   open: boolean;
   onClose: () => void;
   group: GroupedAccount;
   onConfirm: (payments: Payment[]) => void;
+  isLoading?: boolean;
 }) {
   const { exchangeRate } = useCurrency();
   const dualPrice = (usd: number) => `$${usd.toFixed(2)} / Bs. ${(usd * exchangeRate).toFixed(2)}`;
@@ -331,6 +334,7 @@ function PaymentModalWithDetails({
           onClose={onClose}
           onConfirm={onConfirm}
           exchangeRate={exchangeRate}
+          isLoading={isLoading}
         />
       </div>
     </div>
@@ -366,11 +370,13 @@ function InlinePaymentForm({
   onClose,
   onConfirm,
   exchangeRate,
+  isLoading,
 }: {
   totalUsd: number;
   onClose: () => void;
   onConfirm: (payments: Payment[]) => void;
   exchangeRate: number;
+  isLoading?: boolean;
 }) {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("cash_usd");
   const [amount, setAmount] = useState("");
@@ -570,12 +576,12 @@ function InlinePaymentForm({
       {/* Finalize */}
       <Button
         onClick={handleFinalize}
-        disabled={payments.length === 0}
+        disabled={payments.length === 0 || isLoading}
         className="w-full rounded-2xl h-12 font-black text-sm uppercase tracking-wider"
         variant={payments.length > 0 ? "default" : "secondary"}
       >
-        {isFullyPaid && <CheckCircle className="w-4 h-4 mr-2" />}
-        {isFullyPaid ? "Saldar Deuda Completa" : "Registrar Abono"}
+        {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : isFullyPaid && <CheckCircle className="w-4 h-4 mr-2" />}
+        {isLoading ? "Procesando..." : isFullyPaid ? "Saldar Deuda Completa" : "Registrar Abono"}
       </Button>
     </div>
   );

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, ShoppingCart, Minus } from "lucide-react";
+import { Plus, Trash2, ShoppingCart, Minus, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -358,7 +358,9 @@ export function MultiSaleDialog({ open, onOpenChange }: MultiSaleDialogProps) {
             <Button 
               onClick={handleSubmit}
               disabled={isSubmitting}
+              className="gap-2"
             >
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
               {isSubmitting ? "Registrando..." : "Registrar Venta"}
             </Button>
           </div>
