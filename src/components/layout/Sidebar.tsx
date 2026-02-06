@@ -5,10 +5,13 @@ import {
   ShoppingCart,
   BarChart3,
   CreditCard,
+  Settings,
   Users,
   FileText,
-  LogOut
+  LogOut,
+  ChevronDown
 } from "lucide-react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { CurrencyToggle } from "./CurrencyToggle";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,6 +25,9 @@ const adminNavigation = [
   { name: "Historial Ventas", href: "/ventas", icon: ShoppingCart },
   { name: "Cuentas por Cobrar", href: "/cuentas-por-cobrar", icon: CreditCard },
   { name: "Reportes", href: "/reportes", icon: BarChart3 },
+];
+
+const settingsSubNav = [
   { name: "Usuarios", href: "/usuarios", icon: Users },
   { name: "Auditoría", href: "/auditoria", icon: FileText },
 ];
@@ -41,6 +47,9 @@ interface SidebarProps {
 export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
   const location = useLocation();
   const { isAdmin, profile, signOut } = useAuth();
+  const [settingsOpen, setSettingsOpen] = useState(
+    settingsSubNav.some(item => location.pathname === item.href)
+  );
   
   const navigation = isAdmin ? adminNavigation : employeeNavigation;
 
@@ -86,6 +95,46 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
             </Link>
           );
         })}
+
+        {/* Settings submenu - admin only */}
+        {isAdmin && (
+          <div>
+            <button
+              onClick={() => setSettingsOpen(!settingsOpen)}
+              className={cn(
+                "nav-link w-full justify-between",
+                settingsSubNav.some(s => location.pathname === s.href) && "nav-link-active"
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <Settings className="w-5 h-5" />
+                <span>Configuración</span>
+              </div>
+              <ChevronDown className={cn("w-4 h-4 transition-transform", settingsOpen && "rotate-180")} />
+            </button>
+            {settingsOpen && (
+              <div className="ml-4 mt-1 space-y-1 border-l-2 border-sidebar-border pl-3">
+                {settingsSubNav.map((item) => {
+                  const isActive = location.pathname === item.href;
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      onClick={onMobileClose}
+                      className={cn(
+                        "nav-link text-sm",
+                        isActive && "nav-link-active"
+                      )}
+                    >
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.name}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </nav>
 
       {/* Footer */}

@@ -39,6 +39,7 @@ export function MobileBottomNav() {
   const moreMenuItems = [
     { name: "Cuentas por Cobrar", href: "/cuentas-por-cobrar" },
     { name: "Reportes", href: "/reportes" },
+    { name: "Configuración", href: "/usuarios", isHeader: true },
     { name: "Usuarios", href: "/usuarios" },
     { name: "Auditoría", href: "/auditoria" },
   ];
