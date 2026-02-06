@@ -16,6 +16,8 @@ export interface AccountReceivable {
   product_name: string | null;
   product_code: string | null;
   seller_name: string | null;
+  is_paid?: boolean;
+  notes?: string | null;
   credit_group_id?: string | null;
 }
 
@@ -27,6 +29,7 @@ export interface GroupedAccount {
   amountPaid: number;
   amountDue: number;
   items: AccountReceivable[];
+  isPaid: boolean;
 }
 
 export interface DebtorSummary {
@@ -54,19 +57,39 @@ export function useGroupedAccountsReceivable() {
   return useQuery({
     queryKey: ["accounts-receivable-grouped"],
     queryFn: async () => {
+      // Query inventory_movements directly to include paid records
       const { data, error } = await supabase
-        .from("accounts_receivable")
-        .select("*");
+        .from("inventory_movements")
+        .select("*, product:products(name, code)")
+        .eq("is_credit", true)
+        .order("movement_date", { ascending: false });
       
       if (error) throw error;
       
-      const accounts = data as unknown as (AccountReceivable & { credit_group_id?: string })[];
+      // Map to AccountReceivable shape
+      const accounts: (AccountReceivable & { credit_group_id?: string })[] = (data || []).map((m: any) => ({
+        id: m.id,
+        product_id: m.product_id,
+        movement_date: m.movement_date,
+        quantity: m.quantity,
+        unit_price: m.unit_price,
+        total_amount: m.total_amount,
+        amount_paid: m.amount_paid || 0,
+        amount_due: m.total_amount - (m.amount_paid || 0),
+        debt_percentage: m.total_amount > 0 ? ((m.total_amount - (m.amount_paid || 0)) / m.total_amount) * 100 : 0,
+        customer_name: m.customer_name,
+        product_name: m.product?.name || null,
+        product_code: m.product?.code || null,
+        seller_name: null,
+        is_paid: m.is_paid,
+        credit_group_id: m.credit_group_id,
+        notes: m.notes,
+      }));
       
-      // Group accounts by credit_group_id
+      // Group accounts by credit_group_id or customer_name+date
       const groupMap = new Map<string, GroupedAccount>();
       
       accounts.forEach((account) => {
-        // Use credit_group_id if available, otherwise group by customer_name + movement_date
         const groupKey = account.credit_group_id 
           || `${account.customer_name || 'unknown'}_${account.movement_date}`;
         
@@ -76,6 +99,8 @@ export function useGroupedAccountsReceivable() {
           existing.amountPaid += Number(account.amount_paid || 0);
           existing.amountDue += Number(account.amount_due || account.total_amount);
           existing.items.push(account);
+          // Mark as paid only if ALL items are paid
+          if (account.amount_due > 0.005) existing.isPaid = false;
         } else {
           groupMap.set(groupKey, {
             groupId: groupKey,
@@ -85,13 +110,16 @@ export function useGroupedAccountsReceivable() {
             amountPaid: Number(account.amount_paid || 0),
             amountDue: Number(account.amount_due || account.total_amount),
             items: [account],
+            isPaid: account.amount_due <= 0.005,
           });
         }
       });
       
-      return Array.from(groupMap.values()).sort(
-        (a, b) => new Date(b.movementDate).getTime() - new Date(a.movementDate).getTime()
-      );
+      // Sort: unpaid first, then by date
+      return Array.from(groupMap.values()).sort((a, b) => {
+        if (a.isPaid !== b.isPaid) return a.isPaid ? 1 : -1;
+        return new Date(b.movementDate).getTime() - new Date(a.movementDate).getTime();
+      });
     },
   });
 }
