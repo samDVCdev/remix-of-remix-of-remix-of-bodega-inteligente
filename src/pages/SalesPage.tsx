@@ -129,13 +129,23 @@ export default function SalesPage() {
                           </div>
                         </TableCell>
                         <TableCell className="hidden sm:table-cell text-sm">
-                          {Number(movement.quantity).toFixed(0)}
+                          {(() => {
+                            const qty = Number(movement.quantity);
+                            const ups = Number(movement.units_per_package) || 1;
+                            const total = Number(movement.total_amount);
+                            const unitPrice = Number(movement.unit_price);
+                            // If there's an equivalence, show presentation quantity
+                            if (movement.unit_equivalence_id && unitPrice > 0) {
+                              const presentationQty = Math.round(total / unitPrice);
+                              return presentationQty;
+                            }
+                            return qty.toFixed(0);
+                          })()}
                         </TableCell>
                         <TableCell className="hidden md:table-cell text-sm">
                           <div>
                             {movement.product?.sale_type === 'weight' ? (
                               <>
-                                {/* Calculate price per kg from total/quantity for accuracy */}
                                 <p>${((Number(movement.total_amount) / Number(movement.quantity)) * 1000).toFixed(2)}/kg</p>
                                 <p className="text-xs text-muted-foreground">Bs. {((Number(movement.total_amount) / Number(movement.quantity)) * 1000 * exchangeRate).toFixed(2)}/kg</p>
                               </>

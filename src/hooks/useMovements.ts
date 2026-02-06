@@ -30,6 +30,7 @@ interface CreateMovementData {
   movement_type: "entrada" | "salida";
   quantity: number;
   unit_price: number;
+  total_amount?: number;
   movement_date: string;
   notes?: string;
   is_credit?: boolean;
@@ -44,7 +45,8 @@ export function useCreateMovement() {
 
   return useMutation({
     mutationFn: async (data: CreateMovementData) => {
-      const total_amount = data.quantity * data.unit_price;
+      // Use provided total_amount or fallback to quantity * unit_price
+      const total_amount = data.total_amount ?? (data.quantity * data.unit_price);
       
       const { data: result, error } = await supabase
         .from("inventory_movements")
