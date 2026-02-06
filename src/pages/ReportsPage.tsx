@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { BarChart3, Download, FileText, FileSpreadsheet } from "lucide-react";
 import { useMovements } from "@/hooks/useMovements";
 import { useCurrency } from "@/hooks/useCurrency";
+import { usePagination } from "@/hooks/usePagination";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -45,6 +47,16 @@ export default function ReportsPage() {
     .reduce((sum, m) => sum + Number(m.total_amount), 0) || 0;
 
   const balance = totalVentas - totalEntradas;
+
+  const {
+    paginatedData: paginatedMovements,
+    currentPage,
+    totalPages,
+    totalItems,
+    itemsPerPage,
+    onPageChange,
+    onItemsPerPageChange,
+  } = usePagination(filteredMovements, { initialItemsPerPage: 20 });
 
   return (
     <MainLayout>
@@ -142,38 +154,59 @@ export default function ReportsPage() {
               <p className="text-muted-foreground">No hay movimientos en el período</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="table-header">
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead className="hidden sm:table-cell">Producto</TableHead>
-                    <TableHead>Cant.</TableHead>
-                    <TableHead className="hidden sm:table-cell">P.Unit</TableHead>
-                    <TableHead>Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredMovements?.map((movement) => (
-                    <TableRow key={movement.id}>
-                      <TableCell className="text-xs sm:text-sm">{format(new Date(movement.movement_date), "dd/MM/yy")}</TableCell>
-                      <TableCell>
-                        <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", movement.movement_type === "entrada" ? "bg-success/15 text-success" : "bg-primary/15 text-primary")}>
-                          {movement.movement_type === "entrada" ? "E" : "V"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell max-w-[150px] truncate">{movement.product?.name}</TableCell>
-                      <TableCell>{Number(movement.quantity).toFixed(0)}</TableCell>
-                      <TableCell className="hidden sm:table-cell">{formatPrice(Number(movement.unit_price))}</TableCell>
-                      <TableCell className={cn("font-semibold", movement.movement_type === "entrada" ? "text-warning" : "text-success")}>
-                        {formatPrice(Number(movement.total_amount))}
-                      </TableCell>
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="table-header">
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead className="hidden sm:table-cell">Producto</TableHead>
+                      <TableHead>Cant.</TableHead>
+                      <TableHead className="hidden sm:table-cell">P.Unit</TableHead>
+                      <TableHead>Total</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedMovements?.map((movement) => (
+                      <TableRow key={movement.id}>
+                        <TableCell className="text-xs sm:text-sm">{format(new Date(movement.movement_date), "dd/MM/yy")}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", movement.movement_type === "entrada" ? "bg-success/15 text-success" : "bg-primary/15 text-primary")}>
+                              {movement.movement_type === "entrada" ? "E" : "V"}
+                            </span>
+                            {movement.is_credit && (
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/15 text-amber-500">
+                                F
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell max-w-[150px] truncate">{movement.product?.name}</TableCell>
+                        <TableCell>{Number(movement.quantity).toFixed(0)}</TableCell>
+                        <TableCell className="hidden sm:table-cell">{formatPrice(Number(movement.unit_price))}</TableCell>
+                        <TableCell className={cn("font-semibold", movement.movement_type === "entrada" ? "text-warning" : "text-success")}>
+                          {formatPrice(Number(movement.total_amount))}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              
+              {totalItems > 0 && (
+                <TablePagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={onPageChange}
+                  onItemsPerPageChange={onItemsPerPageChange}
+                  itemsPerPageOptions={[20, 50, 100]}
+                />
+              )}
+            </>
           )}
         </div>
       </div>

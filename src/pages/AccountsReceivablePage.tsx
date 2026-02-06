@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { CreditCard, Search, DollarSign, Package, X, Banknote, Coins, CreditCard as CreditCardIcon, Smartphone, Trash2, Plus, CheckCircle, Eye, Loader2 } from "lucide-react";
+import { CreditCard, Search, DollarSign, Package, X, Banknote, Coins, CreditCard as CreditCardIcon, Smartphone, Trash2, Plus, CheckCircle, Eye, Loader2, CalendarDays } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,8 @@ export default function AccountsReceivablePage() {
   const [paymentGroup, setPaymentGroup] = useState<GroupedAccount | null>(null);
   const [viewingGroup, setViewingGroup] = useState<GroupedAccount | null>(null);
   const [showPaid, setShowPaid] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   
   const { data: groupedAccounts, isLoading } = useGroupedAccountsReceivable();
   const registerPayment = useRegisterGroupPayment();
@@ -31,7 +33,18 @@ export default function AccountsReceivablePage() {
       const matchesSearch = g.customerName.toLowerCase().includes(search.toLowerCase()) ||
         g.items.some(item => item.product_name?.toLowerCase().includes(search.toLowerCase()));
       const matchesStatus = showPaid ? true : !g.isPaid;
-      return matchesSearch && matchesStatus;
+      
+      let matchesDate = true;
+      if (startDate) {
+        matchesDate = matchesDate && new Date(g.movementDate) >= new Date(startDate);
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        matchesDate = matchesDate && new Date(g.movementDate) <= end;
+      }
+      
+      return matchesSearch && matchesStatus && matchesDate;
     }
   );
 
@@ -97,26 +110,34 @@ export default function AccountsReceivablePage() {
           </div>
         </div>
 
-        {/* Search + Filter */}
-        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-          <div className="relative max-w-sm flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              placeholder="Buscar por cliente o producto..." 
-              value={search} 
-              onChange={(e) => setSearch(e.target.value)} 
-              className="pl-10" 
-            />
+        {/* Search + Filters */}
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+            <div className="relative max-w-sm flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input 
+                placeholder="Buscar por cliente o producto..." 
+                value={search} 
+                onChange={(e) => setSearch(e.target.value)} 
+                className="pl-10" 
+              />
+            </div>
+            <div className="flex gap-2 items-center">
+              <CalendarDays className="w-4 h-4 text-muted-foreground shrink-0" />
+              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-[140px]" />
+              <span className="text-muted-foreground text-sm">-</span>
+              <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-[140px]" />
+            </div>
+            <Button
+              variant={showPaid ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowPaid(!showPaid)}
+              className="gap-1.5 shrink-0"
+            >
+              <Eye className="w-4 h-4" />
+              {showPaid ? "Ocultar Pagadas" : "Ver Pagadas"}
+            </Button>
           </div>
-          <Button
-            variant={showPaid ? "default" : "outline"}
-            size="sm"
-            onClick={() => setShowPaid(!showPaid)}
-            className="gap-1.5 shrink-0"
-          >
-            <Eye className="w-4 h-4" />
-            {showPaid ? "Ocultar Pagadas" : "Ver Pagadas"}
-          </Button>
         </div>
 
         {/* Table */}
