@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { CreditCard, Search, DollarSign, Package, X, Banknote, Coins, CreditCard as CreditCardIcon, Smartphone, Trash2, Plus, CheckCircle } from "lucide-react";
+import { CreditCard, Search, DollarSign, Package, X, Banknote, Coins, CreditCard as CreditCardIcon, Smartphone, Trash2, Plus, CheckCircle, Eye } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ import { toast } from "sonner";
 export default function AccountsReceivablePage() {
   const [search, setSearch] = useState("");
   const [paymentGroup, setPaymentGroup] = useState<GroupedAccount | null>(null);
+  const [viewingGroup, setViewingGroup] = useState<GroupedAccount | null>(null);
+  const [showPaid, setShowPaid] = useState(false);
   
   const { data: groupedAccounts, isLoading } = useGroupedAccountsReceivable();
   const registerPayment = useRegisterGroupPayment();
@@ -25,9 +27,12 @@ export default function AccountsReceivablePage() {
   const dualPrice = (usd: number) => `$${usd.toFixed(2)} / Bs. ${(usd * exchangeRate).toFixed(2)}`;
 
   const filteredAccounts = groupedAccounts?.filter(
-    (g) =>
-      g.customerName.toLowerCase().includes(search.toLowerCase()) ||
-      g.items.some(item => item.product_name?.toLowerCase().includes(search.toLowerCase()))
+    (g) => {
+      const matchesSearch = g.customerName.toLowerCase().includes(search.toLowerCase()) ||
+        g.items.some(item => item.product_name?.toLowerCase().includes(search.toLowerCase()));
+      const matchesStatus = showPaid ? true : !g.isPaid;
+      return matchesSearch && matchesStatus;
+    }
   );
 
   const {
@@ -40,7 +45,7 @@ export default function AccountsReceivablePage() {
     onItemsPerPageChange,
   } = usePagination(filteredAccounts, { initialItemsPerPage: 10 });
 
-  const totalPending = groupedAccounts?.reduce((sum, g) => sum + g.amountDue, 0) || 0;
+  const totalPending = groupedAccounts?.filter(g => !g.isPaid).reduce((sum, g) => sum + g.amountDue, 0) || 0;
 
   const handlePaymentConfirm = async (payments: Payment[]) => {
     if (!paymentGroup) return;
@@ -92,15 +97,26 @@ export default function AccountsReceivablePage() {
           </div>
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            placeholder="Buscar por cliente o producto..." 
-            value={search} 
-            onChange={(e) => setSearch(e.target.value)} 
-            className="pl-10" 
-          />
+        {/* Search + Filter */}
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+          <div className="relative max-w-sm flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              placeholder="Buscar por cliente o producto..." 
+              value={search} 
+              onChange={(e) => setSearch(e.target.value)} 
+              className="pl-10" 
+            />
+          </div>
+          <Button
+            variant={showPaid ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowPaid(!showPaid)}
+            className="gap-1.5 shrink-0"
+          >
+            <Eye className="w-4 h-4" />
+            {showPaid ? "Ocultar Pagadas" : "Ver Pagadas"}
+          </Button>
         </div>
 
         {/* Table */}
@@ -122,7 +138,7 @@ export default function AccountsReceivablePage() {
                       <TableHead>Cliente</TableHead>
                       <TableHead className="hidden sm:table-cell">Productos</TableHead>
                       <TableHead className="hidden lg:table-cell">Progreso</TableHead>
-                      <TableHead>Debe</TableHead>
+                      <TableHead>Estado</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -131,7 +147,7 @@ export default function AccountsReceivablePage() {
                       const progress = getPaymentProgress(group);
                       
                       return (
-                        <TableRow key={group.groupId}>
+                        <TableRow key={group.groupId} className={group.isPaid ? "opacity-60" : ""}>
                           <TableCell className="text-xs">
                             {format(new Date(group.movementDate), "dd MMM", { locale: es })}
                           </TableCell>
@@ -161,20 +177,41 @@ export default function AccountsReceivablePage() {
                               </p>
                             </div>
                           </TableCell>
-                          <TableCell className="font-semibold text-amber-500 text-sm">
-                            <p>${group.amountDue.toFixed(2)}</p>
-                            <p className="text-xs text-muted-foreground font-normal">Bs. {(group.amountDue * exchangeRate).toFixed(2)}</p>
+                          <TableCell>
+                            {group.isPaid ? (
+                              <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary bg-primary/10 px-2 py-1 rounded-full">
+                                <CheckCircle className="w-3 h-3" /> Pagada
+                              </span>
+                            ) : (
+                              <div>
+                                <p className="font-semibold text-amber-500 text-sm">${group.amountDue.toFixed(2)}</p>
+                                <p className="text-[10px] text-muted-foreground">Bs. {(group.amountDue * exchangeRate).toFixed(2)}</p>
+                              </div>
+                            )}
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => setPaymentGroup(group)}
-                              className="gap-1 text-primary border-primary hover:bg-primary/10 px-2"
-                            >
-                              <DollarSign className="w-4 h-4" />
-                              <span className="hidden sm:inline">Abonar</span>
-                            </Button>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => setViewingGroup(group)}
+                                className="text-muted-foreground hover:text-foreground"
+                                title="Ver historial"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              {!group.isPaid && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => setPaymentGroup(group)}
+                                  className="gap-1 text-primary border-primary hover:bg-primary/10 px-2"
+                                >
+                                  <DollarSign className="w-4 h-4" />
+                                  <span className="hidden sm:inline">Abonar</span>
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
@@ -205,6 +242,14 @@ export default function AccountsReceivablePage() {
           onClose={() => setPaymentGroup(null)}
           group={paymentGroup}
           onConfirm={handlePaymentConfirm}
+        />
+      )}
+
+      {/* Payment History Dialog */}
+      {viewingGroup && (
+        <PaymentHistoryDialog
+          group={viewingGroup}
+          onClose={() => setViewingGroup(null)}
         />
       )}
     </MainLayout>
@@ -368,7 +413,10 @@ function InlinePaymentForm({
   };
 
   const handleFinalize = () => {
-    if (!isFullyPaid) return;
+    if (payments.length === 0) {
+      toast.error("Registra al menos un pago");
+      return;
+    }
     onConfirm(payments as Payment[]);
   };
 
@@ -522,13 +570,118 @@ function InlinePaymentForm({
       {/* Finalize */}
       <Button
         onClick={handleFinalize}
-        disabled={!isFullyPaid}
+        disabled={payments.length === 0}
         className="w-full rounded-2xl h-12 font-black text-sm uppercase tracking-wider"
-        variant={isFullyPaid ? "default" : "secondary"}
+        variant={payments.length > 0 ? "default" : "secondary"}
       >
         {isFullyPaid && <CheckCircle className="w-4 h-4 mr-2" />}
-        Finalizar Transacción
+        {isFullyPaid ? "Saldar Deuda Completa" : "Registrar Abono"}
       </Button>
+    </div>
+  );
+}
+
+// Payment History Dialog
+function PaymentHistoryDialog({
+  group,
+  onClose,
+}: {
+  group: GroupedAccount;
+  onClose: () => void;
+}) {
+  const { exchangeRate } = useCurrency();
+  const dualPrice = (usd: number) => `$${usd.toFixed(2)} / Bs. ${(usd * exchangeRate).toFixed(2)}`;
+  const progress = group.totalAmount > 0 ? (group.amountPaid / group.totalAmount) * 100 : 0;
+
+  // Parse payment history from notes
+  const paymentHistory = group.items
+    .filter(item => item.notes)
+    .flatMap(item => {
+      const notes = (item as any).notes as string;
+      // Split notes by " | " pattern that separates payment entries with dates
+      return notes.split(" | ").filter(n => n.includes("$") || n.includes("Bs"));
+    });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-lg mx-4 bg-card rounded-3xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[85vh] flex flex-col">
+        <div className="p-6 border-b border-border">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-black italic text-foreground">{group.customerName}</h2>
+              <p className="text-xs text-muted-foreground">
+                {format(new Date(group.movementDate), "dd 'de' MMMM, yyyy", { locale: es })}
+              </p>
+            </div>
+            <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
+              <X className="w-5 h-5 text-muted-foreground" />
+            </button>
+          </div>
+          
+          {/* Progress */}
+          <div className="mt-4 space-y-2">
+            <Progress value={progress} className="h-3" />
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Pagado: <span className="font-semibold text-primary">{dualPrice(group.amountPaid)}</span></span>
+              <span className="text-muted-foreground">Total: <span className="font-semibold">{dualPrice(group.totalAmount)}</span></span>
+            </div>
+            {group.amountDue > 0.005 && (
+              <p className="text-sm font-semibold text-amber-500">Pendiente: {dualPrice(group.amountDue)}</p>
+            )}
+            {group.isPaid && (
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary bg-primary/10 px-2 py-1 rounded-full">
+                <CheckCircle className="w-3 h-3" /> Deuda Saldada
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="p-6 overflow-y-auto flex-1 space-y-4">
+          {/* Products */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Productos</p>
+            <div className="space-y-2">
+              {group.items.map((item) => (
+                <div key={item.id} className="flex justify-between items-center p-3 rounded-xl bg-muted/50 border border-border">
+                  <div>
+                    <p className="font-medium text-sm">{item.product_name}</p>
+                    <p className="text-xs text-muted-foreground">Cant: {Number(item.quantity).toFixed(0)}</p>
+                  </div>
+                  <p className="font-semibold text-sm">{dualPrice(Number(item.total_amount))}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Payment History */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Historial de Pagos</p>
+            {paymentHistory.length === 0 ? (
+              <div className="border-2 border-dashed border-border rounded-2xl p-4 text-center">
+                <p className="text-muted-foreground/60 italic text-sm">No hay pagos registrados</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {paymentHistory.map((entry, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/10">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <DollarSign className="w-4 h-4 text-primary" />
+                    </div>
+                    <p className="text-sm font-medium flex-1">{entry}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="p-4 border-t border-border">
+          <Button onClick={onClose} variant="outline" className="w-full rounded-2xl h-10">
+            Cerrar
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
