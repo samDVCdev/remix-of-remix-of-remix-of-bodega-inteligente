@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Minus, Package, ShoppingCart, ArrowDownToLine } from "lucide-react";
+import { Plus, Trash2, Minus, Package, ShoppingCart, ArrowDownToLine, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -327,7 +327,9 @@ export function MultiMovementDialog({ open, onOpenChange, type }: MultiMovementD
             <Button 
               onClick={handleSubmit}
               disabled={isSubmitting}
+              className="gap-2"
             >
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
               {isSubmitting 
                 ? "Registrando..." 
                 : isSale ? "Registrar Ventas" : "Registrar Entradas"

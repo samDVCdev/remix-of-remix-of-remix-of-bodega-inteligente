@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Product } from "@/types/inventory";
 import { useProductsWithVariants } from "@/hooks/useProducts";
-import { PackagePlus, Search, Scale, Ruler, Droplets, Package } from "lucide-react";
+import { PackagePlus, Search, Scale, Ruler, Droplets, Package, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -384,8 +384,8 @@ export function InventoryEntryDialog({ open, onOpenChange }: InventoryEntryDialo
             disabled={!selectedProduct || quantity <= 0 || isSubmitting}
             className="w-full h-14 gap-2 text-base font-semibold"
           >
-            <PackagePlus className="w-5 h-5" />
-            Confirmar Carga
+            {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <PackagePlus className="w-5 h-5" />}
+            {isSubmitting ? "Cargando..." : "Confirmar Carga"}
           </Button>
         </div>
       </DialogContent>

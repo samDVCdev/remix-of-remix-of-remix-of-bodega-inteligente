@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ interface CreditSaleModalProps {
   items: CartItem[];
   total: number;
   onConfirm: (customerName: string) => void;
+  isLoading?: boolean;
 }
 
 export function CreditSaleModal({ 
@@ -19,7 +21,8 @@ export function CreditSaleModal({
   onOpenChange, 
   items, 
   total, 
-  onConfirm 
+  onConfirm,
+  isLoading 
 }: CreditSaleModalProps) {
   const [customerName, setCustomerName] = useState("");
   const { formatPrice } = useCurrency();
@@ -85,10 +88,11 @@ export function CreditSaleModal({
             </Button>
             <Button
               onClick={handleConfirm}
-              disabled={!customerName.trim()}
+              disabled={!customerName.trim() || isLoading}
               className="flex-1 touch-button bg-warning text-warning-foreground hover:bg-warning/90"
             >
-              Confirmar Fiao
+              {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              {isLoading ? "Procesando..." : "Confirmar Fiao"}
             </Button>
           </div>
         </div>

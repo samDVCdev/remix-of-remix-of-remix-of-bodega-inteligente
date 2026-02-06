@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Product } from "@/types/inventory";
 import { useCreateProduct, useUpdateProduct } from "@/hooks/useProducts";
-import { Plus, Trash2, Save, Scale, Ruler, Droplets, Package } from "lucide-react";
+import { Plus, Trash2, Save, Scale, Ruler, Droplets, Package, Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { useCurrency } from "@/hooks/useCurrency";
 
@@ -540,8 +540,8 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
               className="w-full h-14 gap-2 text-base font-semibold"
               disabled={createProduct.isPending || updateProduct.isPending}
             >
-              <Save className="w-5 h-5" />
-              Guardar Producto
+              {(createProduct.isPending || updateProduct.isPending) ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+              {(createProduct.isPending || updateProduct.isPending) ? "Guardando..." : "Guardar Producto"}
             </Button>
           </form>
         </Form>

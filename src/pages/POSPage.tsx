@@ -25,6 +25,7 @@ export default function POSPage() {
   const [unitProduct, setUnitProduct] = useState<Product | null>(null);
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const { data: products, isLoading } = useProductsWithVariants();
   const { isAdmin } = useAuth();
@@ -99,6 +100,8 @@ export default function POSPage() {
       return;
     }
 
+    setIsProcessing(true);
+
     // Generate a credit_group_id for credit sales with multiple items
     const creditGroupId = isCredit && items.length > 1 
       ? crypto.randomUUID() 
@@ -157,6 +160,8 @@ export default function POSPage() {
       setIsCartOpen(false);
     } catch (error) {
       toast.error("Error al procesar la venta");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -278,6 +283,7 @@ export default function POSPage() {
         onClose={() => setIsPaymentModalOpen(false)}
         totalUsd={getTotal()}
         onConfirm={handlePaymentConfirm}
+        isLoading={isProcessing}
       />
 
       {/* Credit Sale Modal */}
@@ -287,6 +293,7 @@ export default function POSPage() {
         items={items}
         total={getTotal()}
         onConfirm={handleCreditConfirm}
+        isLoading={isProcessing}
       />
     </MainLayout>
   );

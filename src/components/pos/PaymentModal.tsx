@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { X, Banknote, Coins, CreditCard, Smartphone, Trash2, Plus, CheckCircle } from "lucide-react";
+import { X, Banknote, Coins, CreditCard, Smartphone, Trash2, Plus, CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCurrency } from "@/hooks/useCurrency";
@@ -17,6 +17,7 @@ interface PaymentModalProps {
   onClose: () => void;
   totalUsd: number;
   onConfirm: (payments: Payment[]) => void;
+  isLoading?: boolean;
 }
 const methodConfig: Record<PaymentMethod, {
   label: string;
@@ -53,7 +54,8 @@ export function PaymentModal({
   open,
   onClose,
   totalUsd,
-  onConfirm
+  onConfirm,
+  isLoading
 }: PaymentModalProps) {
   const {
     exchangeRate
@@ -240,9 +242,9 @@ export function PaymentModal({
           </div>
 
           {/* Finalize */}
-          <Button onClick={handleFinalize} disabled={!isFullyPaid} className="w-full rounded-2xl h-12 font-black text-sm uppercase tracking-wider" variant={isFullyPaid ? "default" : "secondary"}>
-            {isFullyPaid && <CheckCircle className="w-4 h-4 mr-2" />}
-            Finalizar Transacción
+           <Button onClick={handleFinalize} disabled={!isFullyPaid || isLoading} className="w-full rounded-2xl h-12 font-black text-sm uppercase tracking-wider" variant={isFullyPaid ? "default" : "secondary"}>
+            {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : isFullyPaid && <CheckCircle className="w-4 h-4 mr-2" />}
+            {isLoading ? "Procesando..." : "Finalizar Transacción"}
           </Button>
         </div>
       </div>
