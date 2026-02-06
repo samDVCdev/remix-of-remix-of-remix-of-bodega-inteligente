@@ -142,9 +142,24 @@ export function PaymentModal({
 
           {/* Amount Input Area */}
           <div className="border border-border rounded-2xl p-4 space-y-3">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Monto a abonar ({isBs ? "Bs" : "$"})
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Monto a abonar ({isBs ? "Bs" : "$"})
+              </label>
+              {remainingUsd > 0.005 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const fillAmount = isBs ? remainingUsd * exchangeRate : remainingUsd;
+                    setAmount(fillAmount.toFixed(2));
+                  }}
+                  className="text-xs h-7 px-3 font-bold uppercase tracking-wide border-primary text-primary hover:bg-primary/10"
+                >
+                  Pagar Completo
+                </Button>
+              )}
+            </div>
             <Input type="number" placeholder="0.00" value={amount} onChange={e => setAmount(e.target.value)} className="border-none shadow-none text-3xl font-black h-auto py-1 px-0 focus-visible:ring-0 placeholder:text-muted-foreground/40" min="0" step="0.01" />
             {selectedMethod === "transfer_bs" && <>
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
