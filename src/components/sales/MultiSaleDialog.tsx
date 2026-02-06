@@ -100,6 +100,11 @@ export function MultiSaleDialog({ open, onOpenChange }: MultiSaleDialogProps) {
 
     setIsSubmitting(true);
     try {
+      // Generate a credit_group_id for credit sales with multiple items
+      const creditGroupId = isCredit && validItems.length > 1 
+        ? crypto.randomUUID() 
+        : undefined;
+
       for (const item of validItems) {
         await createMovement.mutateAsync({
           product_id: item.product_id,
@@ -111,6 +116,7 @@ export function MultiSaleDialog({ open, onOpenChange }: MultiSaleDialogProps) {
           is_credit: isCredit,
           customer_name: isCredit ? customerName : undefined,
           sold_by: user?.id,
+          credit_group_id: creditGroupId,
         });
       }
       

@@ -99,6 +99,11 @@ export default function POSPage() {
       return;
     }
 
+    // Generate a credit_group_id for credit sales with multiple items
+    const creditGroupId = isCredit && items.length > 1 
+      ? crypto.randomUUID() 
+      : undefined;
+
     try {
       for (const item of items) {
         // Calculate the quantity in base units
@@ -138,6 +143,7 @@ export default function POSPage() {
           customer_name: isCredit ? customerName : undefined,
           sold_by: user?.id,
           unit_equivalence_id: unitEquivalenceId,
+          credit_group_id: creditGroupId,
         });
       }
 
