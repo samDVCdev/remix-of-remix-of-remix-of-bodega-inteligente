@@ -177,6 +177,14 @@ export function InventoryEntryDialog({ open, onOpenChange }: InventoryEntryDialo
 
       if (error) throw error;
 
+      // Update the equivalence price with the new bulk purchase price
+      if (mainPackage) {
+        await supabase
+          .from("unit_equivalences")
+          .update({ price: purchasePrice })
+          .eq("id", mainPackage.id);
+      }
+
       // Determine package name based on entry mode
       let packageName = selectedProduct.base_unit;
       let unitsPerPackage = 1;
