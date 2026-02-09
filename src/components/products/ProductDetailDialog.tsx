@@ -143,41 +143,82 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border">
-                  <div className="flex items-center gap-2">
-                    <TrendingDown className="w-4 h-4 text-amber-500" />
-                    <span className="text-sm">Precio de Compra</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-semibold">${product.purchase_price.toFixed(2)}</span>
-                    <p className="text-xs text-muted-foreground">
-                      Bs. {(product.purchase_price * exchangeRate).toFixed(2)}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-primary" />
-                    <span className="text-sm">Precio de Venta</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-bold text-primary">${product.sale_price.toFixed(2)}</span>
-                    <p className="text-xs text-muted-foreground">
-                      Bs. {(product.sale_price * exchangeRate).toFixed(2)}
-                    </p>
-                  </div>
-                </div>
+                {/* Purchase prices - bulk and unit */}
+                {(() => {
+                  const purchaseEquiv = product.equivalences?.find(e => e.display_order === 999) 
+                    || product.equivalences?.reduce((max, e) => 
+                      e.base_unit_multiplier > (max?.base_unit_multiplier || 0) ? e : max, 
+                      product.equivalences?.[0]
+                    );
+                  const packageMultiplier = purchaseEquiv?.base_unit_multiplier || 1;
+                  const bulkPurchasePrice = product.purchase_price * packageMultiplier;
+                  const unitPurchasePrice = product.purchase_price;
+                  const unitSalePrice = product.sale_price;
+                  const bulkSalePrice = unitSalePrice * packageMultiplier;
+                  const unitMargin = unitSalePrice - unitPurchasePrice;
+                  const unitMarginPercent = unitPurchasePrice > 0 ? ((unitMargin / unitPurchasePrice) * 100).toFixed(1) : '0';
+                  const bulkMargin = bulkSalePrice - bulkPurchasePrice;
+                  const bulkMarginPercent = bulkPurchasePrice > 0 ? ((bulkMargin / bulkPurchasePrice) * 100).toFixed(1) : '0';
+                  const packageName = purchaseEquiv?.unit_name || 'Bulto';
 
-                <div className="flex items-center justify-between p-3 rounded-lg bg-success/10 border border-success/20">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="w-4 h-4 text-success" />
-                    <span className="text-sm">Margen de Ganancia</span>
-                  </div>
-                  <span className="font-semibold text-success">
-                    ${margin.toFixed(2)} ({marginPercent}%)
-                  </span>
-                </div>
+                  return (
+                    <>
+                      {/* Bulk purchase price */}
+                      <div className="p-3 rounded-lg bg-muted/30 border border-border space-y-2">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Package className="w-4 h-4 text-amber-500" />
+                          <span className="text-sm font-medium">Precio de Compra ({packageName})</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Por {packageName} ({packageMultiplier} uds)</span>
+                          <div className="text-right">
+                            <span className="font-semibold">${bulkPurchasePrice.toFixed(2)}</span>
+                            <p className="text-xs text-muted-foreground">Bs. {(bulkPurchasePrice * exchangeRate).toFixed(2)}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between border-t border-border pt-2">
+                          <span className="text-sm text-muted-foreground">Por Unidad</span>
+                          <div className="text-right">
+                            <span className="font-semibold">${unitPurchasePrice.toFixed(2)}</span>
+                            <p className="text-xs text-muted-foreground">Bs. {(unitPurchasePrice * exchangeRate).toFixed(2)}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Sale price */}
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20">
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="w-4 h-4 text-primary" />
+                          <span className="text-sm">Precio de Venta (Unidad)</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-bold text-primary">${unitSalePrice.toFixed(2)}</span>
+                          <p className="text-xs text-muted-foreground">Bs. {(unitSalePrice * exchangeRate).toFixed(2)}</p>
+                        </div>
+                      </div>
+
+                      {/* Margins */}
+                      <div className="p-3 rounded-lg bg-success/10 border border-success/20 space-y-2">
+                        <div className="flex items-center gap-2 mb-1">
+                          <DollarSign className="w-4 h-4 text-success" />
+                          <span className="text-sm font-medium">Margen de Ganancia</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Por Unidad</span>
+                          <span className="font-semibold text-success">
+                            ${unitMargin.toFixed(2)} ({unitMarginPercent}%)
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between border-t border-border pt-2">
+                          <span className="text-sm text-muted-foreground">Por {packageName}</span>
+                          <span className="font-semibold text-success">
+                            ${bulkMargin.toFixed(2)} ({bulkMarginPercent}%)
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
               </>
             )}
           </div>
