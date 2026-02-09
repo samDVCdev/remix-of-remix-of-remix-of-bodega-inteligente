@@ -65,6 +65,7 @@ export function InventoryEntryDialog({ open, onOpenChange }: InventoryEntryDialo
   const [quantity, setQuantity] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [purchasePrice, setPurchasePrice] = useState<number>(0);
 
   const filteredProducts = useMemo(() => {
     if (!products) return [];
@@ -108,13 +109,21 @@ export function InventoryEntryDialog({ open, onOpenChange }: InventoryEntryDialo
       setSelectedEquivalenceId("");
       setQuantity(0);
       setSearchTerm("");
+      setPurchasePrice(0);
     }
   }, [open]);
 
-  // Set default equivalence and entry mode when product changes
+  // Set default equivalence, entry mode and price when product changes
   useEffect(() => {
     if (mainPackage) {
       setSelectedEquivalenceId(mainPackage.id);
+    }
+    if (selectedProduct) {
+      // Show bulk purchase price (per-unit price * package multiplier)
+      const bulkPrice = mainPackage 
+        ? selectedProduct.purchase_price * mainPackage.base_unit_multiplier
+        : selectedProduct.purchase_price;
+      setPurchasePrice(bulkPrice);
     }
     // For measure-based products, default to measure entry
     if (isMeasureBasedProduct) {
@@ -122,7 +131,7 @@ export function InventoryEntryDialog({ open, onOpenChange }: InventoryEntryDialo
     } else {
       setEntryMode("package");
     }
-  }, [mainPackage, isMeasureBasedProduct]);
+  }, [mainPackage, isMeasureBasedProduct, selectedProduct]);
 
   const calculateUnitsToAdd = () => {
     if (entryMode === "unit") {
@@ -150,12 +159,19 @@ export function InventoryEntryDialog({ open, onOpenChange }: InventoryEntryDialo
       const unitsToAdd = calculateUnitsToAdd();
       const newStock = (selectedProduct.stock_base_units || 0) + unitsToAdd;
 
-      // Update product stock
+      // Calculate per-unit purchase price from bulk price
+      const packageMultiplier = mainPackage?.base_unit_multiplier || 1;
+      const perUnitPurchasePrice = packageMultiplier > 0
+        ? purchasePrice / packageMultiplier
+        : purchasePrice;
+
+      // Update product stock and purchase price
       const { error } = await supabase
         .from("products")
         .update({ 
           stock_base_units: newStock,
-          stock: newStock 
+          stock: newStock,
+          purchase_price: perUnitPurchasePrice,
         })
         .eq("id", selectedProduct.id);
 
@@ -344,6 +360,27 @@ export function InventoryEntryDialog({ open, onOpenChange }: InventoryEntryDialo
                   </Select>
                 </div>
               )}
+
+              {/* Purchase Price */}
+              <div className="space-y-2">
+                <Label className="text-xs uppercase text-muted-foreground tracking-wider">
+                  Precio de Compra ($) — por {mainPackage?.unit_name || selectedProduct.base_unit}
+                </Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={purchasePrice}
+                  onChange={(e) => setPurchasePrice(Number(e.target.value))}
+                  className="h-12 text-lg text-center font-semibold"
+                  placeholder="0.00"
+                />
+                {mainPackage && mainPackage.base_unit_multiplier > 1 && purchasePrice > 0 && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    = <span className="font-semibold text-primary">${(purchasePrice / mainPackage.base_unit_multiplier).toFixed(4)}</span> por {selectedProduct.base_unit}
+                  </p>
+                )}
+              </div>
 
               {/* Quantity Input */}
               <div className="space-y-2">

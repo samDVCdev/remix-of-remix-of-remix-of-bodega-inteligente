@@ -146,7 +146,9 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
         measurement_type: measType,
         purchase_package_name: purchaseEquiv?.unit_name || "Bulto",
         purchase_package_content: purchaseEquiv ? purchaseEquiv.base_unit_multiplier / measureConfig.multiplier : 1,
-        purchase_price: product.purchase_price,
+      purchase_price: purchaseEquiv 
+        ? product.purchase_price * purchaseEquiv.base_unit_multiplier 
+        : product.purchase_price,
         initial_stock_packages: 0,
         price_per_measure_unit: product.price_per_kilo || 0,
         sale_prices: saleEquivalences.length > 0 
@@ -218,12 +220,17 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
       // Calculate initial stock in base units
       const initialStockBaseUnits = data.initial_stock_packages * packageMultiplier;
 
+      // Calculate per-unit purchase price from bulk price
+      const perUnitPurchasePrice = packageMultiplier > 0 
+        ? data.purchase_price / packageMultiplier 
+        : data.purchase_price;
+
       const payload = {
         code: isEditing && product ? product.code : code,
         name: data.name,
         base_unit: measureConfig.baseUnit,
         unit: measureConfig.baseUnit + "s",
-        purchase_price: data.purchase_price,
+        purchase_price: perUnitPurchasePrice,
         sale_price: salePrice,
         stock_base_units: isEditing ? product?.stock_base_units || 0 : initialStockBaseUnits,
         low_stock_threshold: 10,
