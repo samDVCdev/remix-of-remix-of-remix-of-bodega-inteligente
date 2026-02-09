@@ -151,8 +151,12 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
                       product.equivalences?.[0]
                     );
                   const packageMultiplier = purchaseEquiv?.base_unit_multiplier || 1;
-                  const bulkPurchasePrice = product.purchase_price * packageMultiplier;
-                  const unitPurchasePrice = product.purchase_price;
+                  // purchase_price in DB could be bulk or per-unit depending on when it was saved
+                  // Use the equivalence price as the authoritative bulk price
+                  const bulkPurchasePrice = purchaseEquiv?.price || product.purchase_price;
+                  const unitPurchasePrice = packageMultiplier > 1 
+                    ? bulkPurchasePrice / packageMultiplier 
+                    : product.purchase_price;
                   const unitSalePrice = product.sale_price;
                   const bulkSalePrice = unitSalePrice * packageMultiplier;
                   const unitMargin = unitSalePrice - unitPurchasePrice;
