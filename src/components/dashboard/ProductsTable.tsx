@@ -10,6 +10,39 @@ interface ProductsTableProps {
   isLoading?: boolean;
 }
 
+function getDisplayStock(product: Product): string {
+  const stock = Number(product.stock_base_units || product.stock);
+  
+  // Weight-based products: show in KG
+  if (product.base_unit === "gramo") {
+    const kg = stock / 1000;
+    return kg % 1 === 0 ? `${kg} kg` : `${kg.toFixed(2)} kg`;
+  }
+  if (product.base_unit === "centimetro") {
+    const m = stock / 100;
+    return m % 1 === 0 ? `${m} m` : `${m.toFixed(2)} m`;
+  }
+  if (product.base_unit === "mililitro") {
+    const l = stock / 1000;
+    return l % 1 === 0 ? `${l} lt` : `${l.toFixed(2)} lt`;
+  }
+
+  // Unit-based: find the largest sale equivalence (not purchase package with display_order 999)
+  const saleEquivs = product.equivalences?.filter(e => e.display_order !== 999 && e.base_unit_multiplier > 1) || [];
+  if (saleEquivs.length > 0) {
+    const largest = saleEquivs.reduce((max, e) => e.base_unit_multiplier > max.base_unit_multiplier ? e : max, saleEquivs[0]);
+    const count = Math.floor(stock / largest.base_unit_multiplier);
+    const remainder = stock % largest.base_unit_multiplier;
+    if (count > 0) {
+      let result = `${count} ${largest.unit_name}`;
+      if (remainder > 0) result += ` + ${remainder}`;
+      return result;
+    }
+  }
+
+  return `${stock}`;
+}
+
 export function ProductsTable({ products, isLoading }: ProductsTableProps) {
   const displayProducts = products.slice(0, 10);
 
@@ -62,13 +95,13 @@ export function ProductsTable({ products, isLoading }: ProductsTableProps) {
           </TableHeader>
           <TableBody>
             {displayProducts.map((product) => {
-              const isLowStock = product.stock <= product.low_stock_threshold;
+              const isLowStock = product.stock_base_units <= product.low_stock_threshold;
               return (
                 <TableRow key={product.id}>
                   <TableCell className="font-mono text-xs">{product.code}</TableCell>
                   <TableCell className="font-medium max-w-[120px] truncate">{product.name}</TableCell>
                   <TableCell className="hidden sm:table-cell">${Number(product.sale_price).toFixed(2)}</TableCell>
-                  <TableCell>{Number(product.stock).toFixed(0)}</TableCell>
+                  <TableCell>{getDisplayStock(product)}</TableCell>
                   <TableCell className="hidden md:table-cell">
                     <span className={cn(
                       isLowStock ? "badge-low-stock" : "badge-in-stock"

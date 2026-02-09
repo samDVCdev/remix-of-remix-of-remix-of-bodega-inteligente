@@ -251,7 +251,11 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
 
       // Calculate low_stock_threshold in base units
       let lowStockThreshold = data.low_stock_quantity;
-      if (data.low_stock_unit && data.low_stock_unit !== "base" && data.sale_prices) {
+      if (isMeasureBasedSale) {
+        // For weight/length/volume: convert from measure unit to base units
+        // e.g., 5 KG → 5000 grams
+        lowStockThreshold = data.low_stock_quantity * measureConfig.multiplier;
+      } else if (data.low_stock_unit && data.low_stock_unit !== "base" && data.sale_prices) {
         const idx = parseInt(data.low_stock_unit);
         const selectedPresentation = data.sale_prices[idx];
         if (selectedPresentation) {
@@ -617,16 +621,22 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent className="bg-popover">
-                          <SelectItem value="base">Unidades base</SelectItem>
-                          {!isMeasureBasedSale && salePriceFields.map((sp, index) => {
-                            const name = form.watch(`sale_prices.${index}.unit_name`);
-                            const qty = form.watch(`sale_prices.${index}.base_unit_multiplier`);
-                            return name ? (
-                              <SelectItem key={sp.id} value={String(index)}>
-                                {name} ({qty} un.)
-                              </SelectItem>
-                            ) : null;
-                          })}
+                          {isMeasureBasedSale ? (
+                            <SelectItem value="base">{config.measureLabel} ({config.contentLabel})</SelectItem>
+                          ) : (
+                            <>
+                              <SelectItem value="base">Unidades base</SelectItem>
+                              {salePriceFields.map((sp, index) => {
+                                const name = form.watch(`sale_prices.${index}.unit_name`);
+                                const qty = form.watch(`sale_prices.${index}.base_unit_multiplier`);
+                                return name ? (
+                                  <SelectItem key={sp.id} value={String(index)}>
+                                    {name} ({qty} un.)
+                                  </SelectItem>
+                                ) : null;
+                              })}
+                            </>
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -634,7 +644,12 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
                   )}
                 />
               </div>
-              {form.watch("low_stock_unit") && form.watch("low_stock_unit") !== "base" && !isMeasureBasedSale && (() => {
+              {isMeasureBasedSale && (
+                <p className="text-xs text-muted-foreground">
+                  = {(form.watch("low_stock_quantity") || 0) * config.multiplier} {config.baseUnit}s (unidades base)
+                </p>
+              )}
+              {!isMeasureBasedSale && form.watch("low_stock_unit") && form.watch("low_stock_unit") !== "base" && (() => {
                 const idx = parseInt(form.watch("low_stock_unit") || "0");
                 const multiplier = form.watch(`sale_prices.${idx}.base_unit_multiplier`) || 1;
                 const qty = form.watch("low_stock_quantity") || 0;
