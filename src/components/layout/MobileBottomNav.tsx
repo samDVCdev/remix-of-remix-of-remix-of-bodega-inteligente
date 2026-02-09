@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Package, ShoppingCart, CreditCard, MoreHorizontal, X, LayoutDashboard, List } from "lucide-react";
+import { Package, ShoppingCart, CreditCard, MoreHorizontal, X, LayoutDashboard, List, BarChart3, Users, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { LucideIcon } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface NavItem {
   name: string;
@@ -19,7 +20,6 @@ export function MobileBottomNav() {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const { isAdmin } = useAuth();
 
-  // Employee nav: Productos, POS (center), Ventas, Cuentas
   const employeeNavItems: NavItem[] = [
     { name: "Productos", href: "/productos", icon: Package },
     { name: "Vender", href: "/pos", icon: ShoppingCart, isCenter: true },
@@ -27,7 +27,6 @@ export function MobileBottomNav() {
     { name: "Cuentas", href: "/cuentas-por-cobrar", icon: CreditCard },
   ];
 
-  // Admin nav: Dashboard, Productos, POS (center), Ventas, Más
   const adminNavItems: NavItem[] = [
     { name: "Inicio", href: "/", icon: LayoutDashboard },
     { name: "Productos", href: "/productos", icon: Package },
@@ -37,11 +36,10 @@ export function MobileBottomNav() {
   ];
 
   const moreMenuItems = [
-    { name: "Cuentas por Cobrar", href: "/cuentas-por-cobrar" },
-    { name: "Reportes", href: "/reportes" },
-    { name: "Configuración", href: "/usuarios", isHeader: true },
-    { name: "Usuarios", href: "/usuarios" },
-    { name: "Auditoría", href: "/auditoria" },
+    { name: "Cuentas por Cobrar", href: "/cuentas-por-cobrar", icon: CreditCard },
+    { name: "Reportes", href: "/reportes", icon: BarChart3 },
+    { name: "Usuarios", href: "/usuarios", icon: Users },
+    { name: "Auditoría", href: "/auditoria", icon: Shield },
   ];
 
   const navItems = isAdmin ? adminNavItems : employeeNavItems;
@@ -52,6 +50,70 @@ export function MobileBottomNav() {
 
   return (
     <>
+      {/* Bottom Sheet Overlay + Panel */}
+      <AnimatePresence>
+        {isMoreOpen && (
+          <>
+            <motion.div
+              className="lg:hidden fixed inset-0 z-40 bg-foreground/40 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              onClick={() => setIsMoreOpen(false)}
+            />
+            <motion.div
+              className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-card rounded-t-3xl shadow-[0_-8px_30px_-6px_hsl(var(--foreground)/0.12)]"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 28, stiffness: 320 }}
+            >
+              {/* Handle */}
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1.5 rounded-full bg-muted-foreground/25" />
+              </div>
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 pb-3 pt-1">
+                <h3 className="text-base font-semibold text-foreground tracking-tight">Más opciones</h3>
+                <button
+                  onClick={() => setIsMoreOpen(false)}
+                  className="p-1.5 rounded-full hover:bg-muted transition-colors"
+                >
+                  <X className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </div>
+
+              {/* Grid */}
+              <div className="grid grid-cols-2 gap-3 px-5 pb-8">
+                {moreMenuItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.href;
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      onClick={() => setIsMoreOpen(false)}
+                      className={cn(
+                        "flex items-center gap-3 p-4 rounded-2xl text-sm font-medium transition-all duration-200 active:scale-[0.97]",
+                        isActive
+                          ? "bg-primary/10 text-primary ring-1 ring-primary/20"
+                          : "bg-muted/50 text-foreground hover:bg-muted"
+                      )}
+                    >
+                      <Icon className={cn("w-5 h-5 shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Bottom Nav Bar */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border safe-area-pb">
         <div className="flex items-center justify-around h-16 px-2">
           {navItems.map((item) => {
@@ -67,8 +129,8 @@ export function MobileBottomNav() {
                 >
                   <div className={cn(
                     "w-14 h-14 rounded-full flex items-center justify-center shadow-lg",
-                    location.pathname === "/pos" 
-                      ? "bg-primary ring-4 ring-primary/20" 
+                    location.pathname === "/pos"
+                      ? "bg-primary ring-4 ring-primary/20"
                       : "bg-primary"
                   )}>
                     <Icon className="w-7 h-7 text-primary-foreground" />
@@ -116,46 +178,6 @@ export function MobileBottomNav() {
           })}
         </div>
       </nav>
-
-      {/* More Menu Overlay */}
-      {isMoreOpen && (
-        <div 
-          className="lg:hidden fixed inset-0 z-40 bg-background/80 backdrop-blur-sm"
-          onClick={() => setIsMoreOpen(false)}
-        >
-          <div 
-            className="absolute bottom-20 left-4 right-4 bg-card rounded-xl border border-border shadow-xl p-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-foreground">Más opciones</h3>
-              <button
-                onClick={() => setIsMoreOpen(false)}
-                className="p-1 rounded-full hover:bg-muted"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {moreMenuItems.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  onClick={() => setIsMoreOpen(false)}
-                  className={cn(
-                    "p-3 rounded-lg text-sm font-medium transition-colors",
-                    location.pathname === item.href
-                      ? "bg-primary/10 text-primary"
-                      : "bg-muted/50 text-foreground hover:bg-muted"
-                  )}
-                >
-                  {item.name}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }
