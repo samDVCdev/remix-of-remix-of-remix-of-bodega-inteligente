@@ -1,10 +1,11 @@
-import { useState } from "react";
-import { Plus, Trash2, ShoppingCart, Package, Eye } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Plus, Trash2, ShoppingCart, Package, Eye, Search, CalendarIcon } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { MultiSaleDialog } from "@/components/sales/MultiSaleDialog";
+import { Input } from "@/components/ui/input";
 import { MovementDetailDialog } from "@/components/movements/MovementDetailDialog";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { useMovements, useDeleteMovement } from "@/hooks/useMovements";
@@ -21,12 +22,28 @@ export default function SalesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [deletingMovement, setDeletingMovement] = useState<InventoryMovement | null>(null);
   const [viewingMovement, setViewingMovement] = useState<InventoryMovement | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   const { isAdmin } = useAuth();
   const { data: businessStatus } = useBusinessStatus();
   const { data: movements, isLoading } = useMovements("salida");
   const deleteMovement = useDeleteMovement();
   const { exchangeRate } = useCurrency();
+
+  const filteredMovements = useMemo(() => {
+    if (!movements) return [];
+    return movements.filter(m => {
+      const matchesSearch = !searchTerm || 
+        m.product?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        m.customer_name?.toLowerCase().includes(searchTerm.toLowerCase());
+      const mDate = new Date(m.movement_date);
+      const matchesStart = !startDate || mDate >= new Date(startDate);
+      const matchesEnd = !endDate || mDate <= new Date(endDate + "T23:59:59");
+      return matchesSearch && matchesStart && matchesEnd;
+    });
+  }, [movements, searchTerm, startDate, endDate]);
 
   const {
     paginatedData,
@@ -36,7 +53,7 @@ export default function SalesPage() {
     itemsPerPage,
     onPageChange,
     onItemsPerPageChange,
-  } = usePagination(movements, { initialItemsPerPage: 10 });
+  } = usePagination(filteredMovements, { initialItemsPerPage: 10 });
 
   const handleDelete = async () => {
     if (deletingMovement) {
@@ -71,6 +88,33 @@ export default function SalesPage() {
             <Plus className="w-4 h-4" />
             Nueva Venta
           </Button>
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por producto o cliente..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-10"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="h-10 w-[140px]"
+            />
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="h-10 w-[140px]"
+            />
+          </div>
         </div>
 
         {/* Business Status Warning for Employees */}
