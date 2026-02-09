@@ -37,6 +37,9 @@ const productSchema = z.object({
   purchase_package_content: z.coerce.number().min(0.001, "Mínimo 0.001"),
   purchase_price: z.coerce.number().min(0, "Precio debe ser >= 0"),
   initial_stock_packages: z.coerce.number().min(0, "Mínimo 0"),
+  // Stock mínimo
+  low_stock_quantity: z.coerce.number().min(0, "Mínimo 0"),
+  low_stock_unit: z.string().optional(), // "base" or index of sale_prices
   // Para productos por peso/longitud/volumen: precio por unidad de medida
   price_per_measure_unit: z.coerce.number().min(0).optional(),
   // Para productos por unidades: presentaciones de venta
@@ -66,6 +69,8 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
       purchase_package_content: 1,
       purchase_price: 0,
       initial_stock_packages: 0,
+      low_stock_quantity: 5,
+      low_stock_unit: "base",
       price_per_measure_unit: 0,
       sale_prices: [{ unit_name: "Unidad", base_unit_multiplier: 1, price: 0 }],
     },
@@ -141,15 +146,32 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
       
       const measureConfig = getMeasurementConfig(measType);
       
+      // Determine low_stock_unit from threshold
+      let lowStockUnit = "base";
+      let lowStockQty = product.low_stock_threshold;
+      if (saleEquivalences.length > 0) {
+        // Try to find a sale equivalence that divides evenly
+        const matchingEquiv = saleEquivalences.find(e => 
+          e.base_unit_multiplier > 1 && product.low_stock_threshold % e.base_unit_multiplier === 0
+        );
+        if (matchingEquiv) {
+          const idx = saleEquivalences.indexOf(matchingEquiv);
+          lowStockUnit = String(idx);
+          lowStockQty = product.low_stock_threshold / matchingEquiv.base_unit_multiplier;
+        }
+      }
+
       form.reset({
         name: product.name,
         measurement_type: measType,
         purchase_package_name: purchaseEquiv?.unit_name || "Bulto",
         purchase_package_content: purchaseEquiv ? purchaseEquiv.base_unit_multiplier / measureConfig.multiplier : 1,
-      purchase_price: purchaseEquiv 
-        ? product.purchase_price * purchaseEquiv.base_unit_multiplier 
-        : product.purchase_price,
+        purchase_price: purchaseEquiv 
+          ? product.purchase_price * purchaseEquiv.base_unit_multiplier 
+          : product.purchase_price,
         initial_stock_packages: 0,
+        low_stock_quantity: lowStockQty,
+        low_stock_unit: lowStockUnit,
         price_per_measure_unit: product.price_per_kilo || 0,
         sale_prices: saleEquivalences.length > 0 
           ? saleEquivalences.map(e => ({
@@ -167,6 +189,8 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
         purchase_package_content: 1,
         purchase_price: 0,
         initial_stock_packages: 0,
+        low_stock_quantity: 5,
+        low_stock_unit: "base",
         price_per_measure_unit: 0,
         sale_prices: [{ unit_name: "Unidad", base_unit_multiplier: 1, price: 0 }],
       });
@@ -225,7 +249,18 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
         ? data.purchase_price / packageMultiplier 
         : data.purchase_price;
 
+      // Calculate low_stock_threshold in base units
+      let lowStockThreshold = data.low_stock_quantity;
+      if (data.low_stock_unit && data.low_stock_unit !== "base" && data.sale_prices) {
+        const idx = parseInt(data.low_stock_unit);
+        const selectedPresentation = data.sale_prices[idx];
+        if (selectedPresentation) {
+          lowStockThreshold = data.low_stock_quantity * selectedPresentation.base_unit_multiplier;
+        }
+      }
+
       const payload = {
+        ...({} as any),
         code: isEditing && product ? product.code : code,
         name: data.name,
         base_unit: measureConfig.baseUnit,
@@ -233,7 +268,7 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
         purchase_price: perUnitPurchasePrice,
         sale_price: salePrice,
         stock_base_units: isEditing ? product?.stock_base_units || 0 : initialStockBaseUnits,
-        low_stock_threshold: 10,
+        low_stock_threshold: lowStockThreshold,
         sale_type: saleType,
         price_per_kilo: pricePerKilo,
         equivalences,
@@ -540,6 +575,75 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* Stock Mínimo Section */}
+            <div className="p-4 bg-muted/30 rounded-lg border space-y-3">
+              <Label className="text-xs uppercase text-muted-foreground tracking-wider font-semibold">
+                📦 Stock Mínimo (Alerta)
+              </Label>
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="low_stock_quantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-muted-foreground">Cantidad</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="1" 
+                          min="0" 
+                          placeholder="5" 
+                          className="h-12"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="low_stock_unit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-muted-foreground">Medido en</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || "base"}>
+                        <FormControl>
+                          <SelectTrigger className="h-12">
+                            <SelectValue placeholder="Unidades base" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="bg-popover">
+                          <SelectItem value="base">Unidades base</SelectItem>
+                          {!isMeasureBasedSale && salePriceFields.map((sp, index) => {
+                            const name = form.watch(`sale_prices.${index}.unit_name`);
+                            const qty = form.watch(`sale_prices.${index}.base_unit_multiplier`);
+                            return name ? (
+                              <SelectItem key={sp.id} value={String(index)}>
+                                {name} ({qty} un.)
+                              </SelectItem>
+                            ) : null;
+                          })}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              {form.watch("low_stock_unit") && form.watch("low_stock_unit") !== "base" && !isMeasureBasedSale && (() => {
+                const idx = parseInt(form.watch("low_stock_unit") || "0");
+                const multiplier = form.watch(`sale_prices.${idx}.base_unit_multiplier`) || 1;
+                const qty = form.watch("low_stock_quantity") || 0;
+                return (
+                  <p className="text-xs text-muted-foreground">
+                    = {qty * multiplier} unidades base
+                  </p>
+                );
+              })()}
             </div>
 
             <Button 
