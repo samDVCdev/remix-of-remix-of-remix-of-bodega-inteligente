@@ -9,7 +9,7 @@ import { ProductsTable } from "@/components/dashboard/ProductsTable";
 import { CurrencyToggle } from "@/components/layout/CurrencyToggle";
 import { BusinessStatusToggle } from "@/components/business/BusinessStatusToggle";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
-import { useProducts } from "@/hooks/useProducts";
+import { useProductsWithVariants } from "@/hooks/useProducts";
 import { useDebtorsSummary } from "@/hooks/useAccountsReceivable";
 import { useCurrency } from "@/hooks/useCurrency";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 const Index = () => {
   const navigate = useNavigate();
   const { data: stats, isLoading } = useDashboardStats();
-  const { data: products, isLoading: productsLoading } = useProducts();
+  const { data: products, isLoading: productsLoading } = useProductsWithVariants();
   const { data: debtors } = useDebtorsSummary();
   const { formatPrice } = useCurrency();
 

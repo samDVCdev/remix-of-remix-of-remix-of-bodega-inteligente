@@ -35,7 +35,7 @@ export function useUsers() {
           user_id: profile.user_id,
           full_name: profile.full_name,
           created_at: profile.created_at,
-          is_active: (profile as any).is_active ?? true,
+          is_active: profile.is_active ?? true,
           role: (userRole?.role as "admin" | "empleado") || "empleado",
         };
       });
@@ -60,7 +60,7 @@ export function useUpdateUserRole() {
       // Log audit event
       const { data: { user } } = await supabase.auth.getUser();
       await supabase
-        .from("audit_logs" as any)
+        .from("audit_logs")
         .insert({
           action: 'USER_ROLE_UPDATED',
           entity_type: 'user_roles',
@@ -107,7 +107,7 @@ export function useToggleUserStatus() {
     mutationFn: async ({ userId, isActive }: { userId: string; isActive: boolean }) => {
       const { error } = await supabase
         .from("profiles")
-        .update({ is_active: isActive } as any)
+        .update({ is_active: isActive })
         .eq("user_id", userId);
       
       if (error) throw error;
@@ -115,7 +115,7 @@ export function useToggleUserStatus() {
       // Log audit event
       const { data: { user } } = await supabase.auth.getUser();
       await supabase
-        .from("audit_logs" as any)
+        .from("audit_logs")
         .insert({
           action: isActive ? 'USER_ACTIVATED' : 'USER_DEACTIVATED',
           entity_type: 'profiles',
