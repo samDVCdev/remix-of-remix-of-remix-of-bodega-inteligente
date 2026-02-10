@@ -20,9 +20,6 @@ import logoKiosko from "@/assets/logo-kiosko.png";
 
 const adminNavigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Punto de Venta", href: "/pos", icon: ShoppingCart },
-  { name: "Productos", href: "/productos", icon: Package },
-  { name: "Historial Ventas", href: "/ventas", icon: ShoppingCart },
   { name: "Cuentas por Cobrar", href: "/cuentas-por-cobrar", icon: CreditCard },
   { name: "Reportes", href: "/reportes", icon: BarChart3 },
 ];
@@ -33,10 +30,17 @@ const settingsSubNav = [
 ];
 
 const employeeNavigation = [
-  { name: "Punto de Venta", href: "/pos", icon: ShoppingCart },
-  { name: "Productos", href: "/productos", icon: Package },
-  { name: "Historial Ventas", href: "/ventas", icon: ShoppingCart },
   { name: "Cuentas por Cobrar", href: "/cuentas-por-cobrar", icon: CreditCard },
+];
+
+const ventasSubNav = [
+  { name: "Punto de Venta", href: "/pos", icon: ShoppingCart },
+  { name: "Historial Ventas", href: "/ventas", icon: FileText },
+];
+
+const productosSubNav = [
+  { name: "Catálogo", href: "/productos", icon: Package },
+  { name: "Movimientos", href: "/movimientos-inventario", icon: BarChart3 },
 ];
 
 interface SidebarProps {
@@ -47,11 +51,62 @@ interface SidebarProps {
 export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
   const location = useLocation();
   const { isAdmin, profile, signOut } = useAuth();
+  const [ventasOpen, setVentasOpen] = useState(
+    ventasSubNav.some(item => location.pathname === item.href)
+  );
+  const [productosOpen, setProductosOpen] = useState(
+    productosSubNav.some(item => location.pathname === item.href)
+  );
   const [settingsOpen, setSettingsOpen] = useState(
     settingsSubNav.some(item => location.pathname === item.href)
   );
   
   const navigation = isAdmin ? adminNavigation : employeeNavigation;
+
+  const renderSubmenu = (
+    label: string,
+    Icon: any,
+    items: typeof ventasSubNav,
+    isOpen: boolean,
+    setOpen: (v: boolean) => void
+  ) => (
+    <div>
+      <button
+        onClick={() => setOpen(!isOpen)}
+        className={cn(
+          "nav-link w-full justify-between",
+          items.some(s => location.pathname === s.href) && "nav-link-active"
+        )}
+      >
+        <div className="flex items-center gap-3">
+          <Icon className="w-5 h-5" />
+          <span>{label}</span>
+        </div>
+        <ChevronDown className={cn("w-4 h-4 transition-transform", isOpen && "rotate-180")} />
+      </button>
+      {isOpen && (
+        <div className="ml-4 mt-1 space-y-1 border-l-2 border-sidebar-border pl-3">
+          {items.map((item) => {
+            const isActive = location.pathname === item.href;
+            return (
+              <Link
+                key={item.name}
+                to={item.href}
+                onClick={onMobileClose}
+                className={cn(
+                  "nav-link text-sm",
+                  isActive && "nav-link-active"
+                )}
+              >
+                <item.icon className="w-4 h-4" />
+                <span>{item.name}</span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <aside className={cn(
@@ -78,17 +133,37 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {navigation.map((item) => {
+        {/* Dashboard link (admin only, first item) */}
+        {isAdmin && (() => {
+          const dashItem = adminNavigation[0];
+          const isActive = location.pathname === dashItem.href;
+          return (
+            <Link
+              to={dashItem.href}
+              onClick={onMobileClose}
+              className={cn("nav-link", isActive && "nav-link-active")}
+            >
+              <dashItem.icon className="w-5 h-5" />
+              <span>{dashItem.name}</span>
+            </Link>
+          );
+        })()}
+
+        {/* Ventas submenu */}
+        {renderSubmenu("Ventas", ShoppingCart, ventasSubNav, ventasOpen, setVentasOpen)}
+
+        {/* Productos submenu */}
+        {renderSubmenu("Productos", Package, productosSubNav, productosOpen, setProductosOpen)}
+
+        {/* Remaining nav items (Cuentas por Cobrar, Reportes) */}
+        {navigation.filter((_, i) => isAdmin ? i > 0 : true).map((item) => {
           const isActive = location.pathname === item.href;
           return (
             <Link
               key={item.name}
               to={item.href}
               onClick={onMobileClose}
-              className={cn(
-                "nav-link",
-                isActive && "nav-link-active"
-              )}
+              className={cn("nav-link", isActive && "nav-link-active")}
             >
               <item.icon className="w-5 h-5" />
               <span>{item.name}</span>
@@ -97,44 +172,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
         })}
 
         {/* Settings submenu - admin only */}
-        {isAdmin && (
-          <div>
-            <button
-              onClick={() => setSettingsOpen(!settingsOpen)}
-              className={cn(
-                "nav-link w-full justify-between",
-                settingsSubNav.some(s => location.pathname === s.href) && "nav-link-active"
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <Settings className="w-5 h-5" />
-                <span>Configuración</span>
-              </div>
-              <ChevronDown className={cn("w-4 h-4 transition-transform", settingsOpen && "rotate-180")} />
-            </button>
-            {settingsOpen && (
-              <div className="ml-4 mt-1 space-y-1 border-l-2 border-sidebar-border pl-3">
-                {settingsSubNav.map((item) => {
-                  const isActive = location.pathname === item.href;
-                  return (
-                    <Link
-                      key={item.name}
-                      to={item.href}
-                      onClick={onMobileClose}
-                      className={cn(
-                        "nav-link text-sm",
-                        isActive && "nav-link-active"
-                      )}
-                    >
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.name}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
+        {isAdmin && renderSubmenu("Configuración", Settings, settingsSubNav, settingsOpen, setSettingsOpen)}
       </nav>
 
       {/* Footer */}

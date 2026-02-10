@@ -84,10 +84,6 @@ export default function SalesPage() {
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">Registro de ventas de inventario</p>
           </div>
-          <Button onClick={handleNewSale} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Nueva Venta
-          </Button>
         </div>
 
         {/* Filters */}
@@ -135,10 +131,6 @@ export default function SalesPage() {
             <div className="p-12 text-center">
               <Package className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
               <p className="text-muted-foreground">No hay ventas registradas</p>
-              <Button onClick={handleNewSale} className="mt-4 gap-2">
-                <Plus className="w-4 h-4" />
-                Registrar Primera Venta
-              </Button>
             </div>
           ) : (
             <>

@@ -16,6 +16,7 @@ import UsersPage from "./pages/UsersPage";
 import AuditPage from "./pages/AuditPage";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
+import InventoryMovementsPage from "./pages/InventoryMovementsPage";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,7 @@ const App = () => (
               <Route path="/cuentas-por-cobrar" element={<ProtectedRoute><AccountsReceivablePage /></ProtectedRoute>} />
               <Route path="/reportes" element={<ProtectedRoute requireAdmin><ReportsPage /></ProtectedRoute>} />
               <Route path="/usuarios" element={<ProtectedRoute requireAdmin><UsersPage /></ProtectedRoute>} />
+              <Route path="/movimientos-inventario" element={<ProtectedRoute><InventoryMovementsPage /></ProtectedRoute>} />
               <Route path="/auditoria" element={<ProtectedRoute requireAdmin><AuditPage /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
