@@ -37,7 +37,9 @@ export function MobileBottomNav() {
 
   const allModules = [
     { name: "Inicio", href: "/", icon: LayoutDashboard },
+    { name: "POS", href: "/pos", icon: ShoppingCart },
     { name: "Productos", href: "/productos", icon: Package },
+    { name: "Movimientos", href: "/movimientos-inventario", icon: List },
     { name: "Ventas", href: "/ventas", icon: List },
     { name: "Reportes", href: "/reportes", icon: BarChart3 },
     { name: "Cuentas", href: "/cuentas-por-cobrar", icon: CreditCard },
