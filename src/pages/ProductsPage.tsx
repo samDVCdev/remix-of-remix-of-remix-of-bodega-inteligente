@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Search, Package, Download, FileSpreadsheet, Eye, Scale, Layers, PackagePlus } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Package, Download, FileSpreadsheet, Eye, Scale, Layers, PackagePlus, Upload } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ProductCreateDialog } from "@/components/products/ProductCreateDialog";
 import { InventoryEntryDialog } from "@/components/products/InventoryEntryDialog";
+import { BulkUploadDialog } from "@/components/products/BulkUploadDialog";
 import { ProductDetailDialog } from "@/components/products/ProductDetailDialog";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { useProductsWithVariants, useDeleteProduct } from "@/hooks/useProducts";
@@ -21,6 +22,7 @@ export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
+  const [isBulkOpen, setIsBulkOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
@@ -199,6 +201,10 @@ export default function ProductsPage() {
                   <Download className="w-4 h-4" />
                   <span className="hidden sm:inline">PDF</span>
                 </Button>
+                <Button variant="secondary" onClick={() => setIsBulkOpen(true)} className="gap-2">
+                  <Upload className="w-4 h-4" />
+                  <span className="hidden sm:inline">Carga Masiva</span>
+                </Button>
                 <Button variant="secondary" onClick={() => setIsInventoryOpen(true)} className="gap-2">
                   <PackagePlus className="w-4 h-4" />
                   <span className="hidden sm:inline">Ingreso Inventario</span>
@@ -306,6 +312,7 @@ export default function ProductsPage() {
 
       {isAdmin && <ProductCreateDialog open={isFormOpen} onOpenChange={handleFormClose} product={editingProduct} />}
       {isAdmin && <InventoryEntryDialog open={isInventoryOpen} onOpenChange={setIsInventoryOpen} />}
+      {isAdmin && <BulkUploadDialog open={isBulkOpen} onOpenChange={setIsBulkOpen} />}
       <ProductDetailDialog open={!!viewingProduct} onOpenChange={() => setViewingProduct(null)} product={viewingProduct} />
 
       <AlertDialog open={!!deletingProduct} onOpenChange={() => setDeletingProduct(null)}>
