@@ -12,6 +12,12 @@ interface BulkUploadDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface SalePresentation {
+  name: string;
+  multiplier: number;
+  price: number;
+}
+
 interface ParsedProduct {
   row: number;
   name: string;
@@ -21,36 +27,17 @@ interface ParsedProduct {
   purchase_price: number;
   initial_stock_packages: number;
   low_stock_quantity: number;
-  // For unit-based
-  sale_unit_name?: string;
-  sale_unit_multiplier?: number;
-  sale_price?: number;
-  // For measure-based (weight/length/volume)
+  sale_presentations: SalePresentation[];
   price_per_measure_unit?: number;
-  // Validation
   errors: string[];
   status: "pending" | "success" | "error";
 }
 
 const MEASUREMENT_MAP: Record<string, "unit" | "weight" | "length" | "volume"> = {
-  "unidad": "unit",
-  "unidades": "unit",
-  "unit": "unit",
-  "peso": "weight",
-  "kilogramo": "weight",
-  "kilogramos": "weight",
-  "kg": "weight",
-  "weight": "weight",
-  "longitud": "length",
-  "metro": "length",
-  "metros": "length",
-  "mt": "length",
-  "length": "length",
-  "volumen": "volume",
-  "litro": "volume",
-  "litros": "volume",
-  "lt": "volume",
-  "volume": "volume",
+  "unidad": "unit", "unidades": "unit", "unit": "unit",
+  "peso": "weight", "kilogramo": "weight", "kilogramos": "weight", "kg": "weight", "weight": "weight",
+  "longitud": "length", "metro": "length", "metros": "length", "mt": "length", "length": "length",
+  "volumen": "volume", "litro": "volume", "litros": "volume", "lt": "volume", "volume": "volume",
 };
 
 const getMeasurementConfig = (type: string) => {
@@ -62,6 +49,8 @@ const getMeasurementConfig = (type: string) => {
   }
 };
 
+const MAX_PRESENTATIONS = 3;
+
 function downloadTemplate() {
   const headers = [
     "Nombre",
@@ -71,27 +60,38 @@ function downloadTemplate() {
     "Precio Compra ($)",
     "Stock Inicial (Empaques)",
     "Stock Mínimo",
-    "Nombre Presentación Venta",
-    "Multiplicador (unidades base)",
-    "Precio Venta ($)",
+    // Presentation 1
+    "Presentación 1 Nombre",
+    "Presentación 1 Multiplicador",
+    "Presentación 1 Precio ($)",
+    // Presentation 2
+    "Presentación 2 Nombre",
+    "Presentación 2 Multiplicador",
+    "Presentación 2 Precio ($)",
+    // Presentation 3
+    "Presentación 3 Nombre",
+    "Presentación 3 Multiplicador",
+    "Presentación 3 Precio ($)",
+    // Measure price
     "Precio por Medida ($/kg, $/mt, $/lt)",
   ];
 
   const examples = [
-    ["Harina de Trigo", "unidad", "Bulto", 24, 15, 5, 10, "Unidad", 1, 1.5, ""],
-    ["Arroz Premium", "peso", "Saco", 50, 30, 3, 5, "", "", "", 1.2],
-    ["Aceite Vegetal", "volumen", "Caja", 12, 18, 4, 6, "", "", "", 2.5],
-    ["Cable Eléctrico", "longitud", "Rollo", 100, 25, 2, 10, "", "", "", 0.5],
-    ["Jabón en Barra", "unidad", "Caja", 48, 20, 3, 24, "Paquete", 6, 3.5, ""],
+    ["Harina de Trigo", "unidad", "Bulto", 24, 15, 5, 10, "Unidad", 1, 1.5, "", "", "", "", "", "", ""],
+    ["Jabón en Barra", "unidad", "Caja", 48, 20, 3, 24, "Unidad", 1, 0.8, "Paquete x6", 6, 3.5, "Docena", 12, 6, ""],
+    ["Refresco", "unidad", "Caja", 24, 12, 4, 12, "Unidad", 1, 1, "Six Pack", 6, 5, "", "", "", ""],
+    ["Arroz Premium", "peso", "Saco", 50, 30, 3, 5, "", "", "", "", "", "", "", "", "", 1.2],
+    ["Cable Eléctrico", "longitud", "Rollo", 100, 25, 2, 10, "", "", "", "", "", "", "", "", "", 0.5],
   ];
 
   const ws = XLSX.utils.aoa_to_sheet([headers, ...examples]);
-  
-  // Column widths
   ws["!cols"] = [
     { wch: 20 }, { wch: 15 }, { wch: 18 }, { wch: 18 },
-    { wch: 15 }, { wch: 18 }, { wch: 12 }, { wch: 20 },
-    { wch: 20 }, { wch: 14 }, { wch: 25 },
+    { wch: 15 }, { wch: 18 }, { wch: 12 },
+    { wch: 20 }, { wch: 18 }, { wch: 16 },
+    { wch: 20 }, { wch: 18 }, { wch: 16 },
+    { wch: 20 }, { wch: 18 }, { wch: 16 },
+    { wch: 28 },
   ];
 
   const wb = XLSX.utils.book_new();
@@ -115,18 +115,27 @@ function parseFile(data: unknown[][]): ParsedProduct[] {
     const purchase_price = Number(row[4]) || 0;
     const initial_stock_packages = Number(row[5]) || 0;
     const low_stock_quantity = Number(row[6]) || 5;
-    const sale_unit_name = String(row[7] || "").trim();
-    const sale_unit_multiplier = Number(row[8]) || 1;
-    const sale_price = Number(row[9]) || 0;
-    const price_per_measure_unit = Number(row[10]) || 0;
+
+    // Parse up to 3 sale presentations (columns 7-15, groups of 3)
+    const sale_presentations: SalePresentation[] = [];
+    for (let p = 0; p < MAX_PRESENTATIONS; p++) {
+      const baseCol = 7 + p * 3;
+      const pName = String(row[baseCol] || "").trim();
+      const pMult = Number(row[baseCol + 1]) || 0;
+      const pPrice = Number(row[baseCol + 2]) || 0;
+      if (pName && pMult > 0 && pPrice > 0) {
+        sale_presentations.push({ name: pName, multiplier: pMult, price: pPrice });
+      }
+    }
+
+    const price_per_measure_unit = Number(row[16]) || 0;
 
     if (!name) errors.push("Nombre vacío");
     if (purchase_package_content <= 0) errors.push("Contenido empaque inválido");
     if (purchase_price < 0) errors.push("Precio compra negativo");
 
     if (measurement_type === "unit") {
-      if (!sale_unit_name) errors.push("Falta presentación de venta");
-      if (sale_price <= 0) errors.push("Precio venta requerido");
+      if (sale_presentations.length === 0) errors.push("Falta al menos 1 presentación de venta");
     } else {
       if (price_per_measure_unit <= 0) errors.push("Precio por medida requerido");
     }
@@ -140,9 +149,7 @@ function parseFile(data: unknown[][]): ParsedProduct[] {
       purchase_price,
       initial_stock_packages,
       low_stock_quantity,
-      sale_unit_name: sale_unit_name || undefined,
-      sale_unit_multiplier,
-      sale_price,
+      sale_presentations,
       price_per_measure_unit,
       errors,
       status: errors.length > 0 ? "error" : "pending",
@@ -162,7 +169,6 @@ export function BulkUploadDialog({ open, onOpenChange }: BulkUploadDialogProps) 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (evt) => {
       const wb = XLSX.read(evt.target?.result, { type: "binary" });
@@ -205,14 +211,18 @@ export function BulkUploadDialog({ open, onOpenChange }: BulkUploadDialogProps) 
 
         let salePrice = 0;
 
-        if (!isMeasureBased && p.sale_unit_name) {
-          equivalences.push({
-            unit_name: p.sale_unit_name,
-            base_unit_multiplier: p.sale_unit_multiplier || 1,
-            price: p.sale_price || 0,
-            display_order: 0,
+        if (!isMeasureBased) {
+          // Add all sale presentations as equivalences
+          p.sale_presentations.forEach((sp, idx) => {
+            equivalences.push({
+              unit_name: sp.name,
+              base_unit_multiplier: sp.multiplier,
+              price: sp.price,
+              display_order: idx,
+            });
           });
-          salePrice = p.sale_price || 0;
+          // Use first presentation's price as default sale_price
+          salePrice = p.sale_presentations[0]?.price || 0;
         } else {
           salePrice = pricePerKilo;
         }
@@ -228,7 +238,6 @@ export function BulkUploadDialog({ open, onOpenChange }: BulkUploadDialogProps) 
         const initialStockBaseUnits = p.initial_stock_packages * packageMultiplier;
         const perUnitPurchasePrice = packageMultiplier > 0 ? p.purchase_price / packageMultiplier : p.purchase_price;
 
-        // low_stock_threshold in base units
         let lowStockThreshold = p.low_stock_quantity;
         if (isMeasureBased) {
           lowStockThreshold = p.low_stock_quantity * config.multiplier;
@@ -268,6 +277,13 @@ export function BulkUploadDialog({ open, onOpenChange }: BulkUploadDialogProps) 
       setProducts([]);
       onOpenChange(val);
     }
+  };
+
+  const getPresentationsDisplay = (p: ParsedProduct) => {
+    if (p.measurement_type !== "unit") {
+      return `$${p.price_per_measure_unit?.toFixed(2) || "0"} / medida`;
+    }
+    return p.sale_presentations.map(sp => `${sp.name} ($${sp.price.toFixed(2)})`).join(", ");
   };
 
   return (
@@ -314,7 +330,8 @@ export function BulkUploadDialog({ open, onOpenChange }: BulkUploadDialogProps) 
               <div className="text-left bg-muted/30 rounded-lg p-4 text-xs text-muted-foreground space-y-1">
                 <p className="font-semibold text-foreground text-sm mb-2">Instrucciones:</p>
                 <p>• <strong>Tipo Medida:</strong> unidad, peso, longitud o volumen</p>
-                <p>• <strong>Para productos por unidad:</strong> llena Nombre Presentación, Multiplicador y Precio Venta</p>
+                <p>• <strong>Para productos por unidad:</strong> llena hasta 3 presentaciones de venta (Nombre, Multiplicador, Precio)</p>
+                <p>• <strong>Ejemplo:</strong> Unidad (×1, $0.80), Paquete×6 (×6, $3.50), Docena (×12, $6.00)</p>
                 <p>• <strong>Para peso/longitud/volumen:</strong> llena Precio por Medida (última columna)</p>
                 <p>• El contenido del empaque se expresa en la unidad de medida (kg, mt, lt o unidades)</p>
               </div>
@@ -322,7 +339,6 @@ export function BulkUploadDialog({ open, onOpenChange }: BulkUploadDialogProps) 
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Summary */}
             <div className="flex gap-3 text-sm">
               <span className="flex items-center gap-1 text-green-600">
                 <CheckCircle2 className="w-4 h-4" />
@@ -345,14 +361,10 @@ export function BulkUploadDialog({ open, onOpenChange }: BulkUploadDialogProps) 
 
             {isUploading && (
               <div className="w-full bg-muted rounded-full h-2">
-                <div
-                  className="bg-primary h-2 rounded-full transition-all"
-                  style={{ width: `${uploadProgress}%` }}
-                />
+                <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${uploadProgress}%` }} />
               </div>
             )}
 
-            {/* Table */}
             <div className="overflow-x-auto max-h-[400px] overflow-y-auto border rounded-lg">
               <Table>
                 <TableHeader>
@@ -361,7 +373,7 @@ export function BulkUploadDialog({ open, onOpenChange }: BulkUploadDialogProps) 
                     <TableHead>Nombre</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Empaque</TableHead>
-                    <TableHead>Precio Venta</TableHead>
+                    <TableHead>Presentaciones de Venta</TableHead>
                     <TableHead>Estado</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -374,10 +386,8 @@ export function BulkUploadDialog({ open, onOpenChange }: BulkUploadDialogProps) 
                       <TableCell className="text-xs">
                         {p.purchase_package_name} ({p.purchase_package_content})
                       </TableCell>
-                      <TableCell className="text-xs">
-                        {p.measurement_type === "unit"
-                          ? `$${p.sale_price?.toFixed(2) || "0"} / ${p.sale_unit_name || "?"}`
-                          : `$${p.price_per_measure_unit?.toFixed(2) || "0"} / medida`}
+                      <TableCell className="text-xs max-w-[200px]">
+                        {getPresentationsDisplay(p)}
                       </TableCell>
                       <TableCell>
                         {p.status === "success" ? (
@@ -399,7 +409,6 @@ export function BulkUploadDialog({ open, onOpenChange }: BulkUploadDialogProps) 
               </Table>
             </div>
 
-            {/* Actions */}
             <div className="flex justify-between">
               <Button variant="outline" onClick={() => setProducts([])} disabled={isUploading}>
                 Cambiar archivo
