@@ -38,9 +38,11 @@ const productSchema = z.object({
   purchase_package_content: z.coerce.number().min(0.001, "Mínimo 0.001"),
   purchase_price: z.coerce.number().min(0, "Precio debe ser >= 0"),
   initial_stock_packages: z.coerce.number().min(0, "Mínimo 0"),
+  // Stock actual (solo edición)
+  edit_stock_base_units: z.coerce.number().min(0, "Mínimo 0").optional(),
   // Stock mínimo
   low_stock_quantity: z.coerce.number().min(0, "Mínimo 0"),
-  low_stock_unit: z.string().optional(), // "base" or index of sale_prices
+  low_stock_unit: z.string().optional(),
   // Para productos por peso/longitud/volumen: precio por unidad de medida
   price_per_measure_unit: z.coerce.number().min(0).optional(),
   // Para productos por unidades: presentaciones de venta
@@ -173,6 +175,7 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
           ? product.purchase_price * purchaseEquiv.base_unit_multiplier 
           : product.purchase_price,
         initial_stock_packages: 0,
+        edit_stock_base_units: product.stock_base_units,
         low_stock_quantity: lowStockQty,
         low_stock_unit: lowStockUnit,
         price_per_measure_unit: product.price_per_kilo || 0,
@@ -275,7 +278,7 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
         unit: measureConfig.baseUnit + "s",
         purchase_price: perUnitPurchasePrice,
         sale_price: salePrice,
-        stock_base_units: isEditing ? product?.stock_base_units || 0 : initialStockBaseUnits,
+        stock_base_units: isEditing ? (data.edit_stock_base_units ?? product?.stock_base_units ?? 0) : initialStockBaseUnits,
         low_stock_threshold: lowStockThreshold,
         sale_type: saleType,
         price_per_kilo: pricePerKilo,
@@ -390,28 +393,53 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="initial_stock_packages"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs uppercase text-primary font-semibold tracking-wider">
-                        Stock Inicial ({purchasePackageName}s)
-                      </FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          step="1" 
-                          min="0" 
-                          placeholder="0" 
-                          className="h-12 text-lg"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {isEditing ? (
+                  <FormField
+                    control={form.control}
+                    name="edit_stock_base_units"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs uppercase text-primary font-semibold tracking-wider">
+                          Stock Actual ({config.baseUnit}s)
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            step="1" 
+                            min="0" 
+                            placeholder="0" 
+                            className="h-12 text-lg"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : (
+                  <FormField
+                    control={form.control}
+                    name="initial_stock_packages"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs uppercase text-primary font-semibold tracking-wider">
+                          Stock Inicial ({purchasePackageName}s)
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            step="1" 
+                            min="0" 
+                            placeholder="0" 
+                            className="h-12 text-lg"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
