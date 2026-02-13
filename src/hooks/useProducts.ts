@@ -87,6 +87,7 @@ interface CreateProductData {
   low_stock_threshold?: number;
   sale_type?: 'unit' | 'weight' | 'variants';
   price_per_kilo?: number;
+  image_url?: string | null;
 }
 
 interface VariantData {

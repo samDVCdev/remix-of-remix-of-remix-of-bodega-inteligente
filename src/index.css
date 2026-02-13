@@ -172,9 +172,8 @@
 
   /* Touch-friendly product card */
   .product-card {
-    @apply bg-card rounded-xl p-4 border border-border flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 active:scale-95;
+    @apply bg-card rounded-xl p-3 border border-border flex flex-col items-start text-left cursor-pointer transition-all duration-200 active:scale-95;
     box-shadow: var(--shadow-card);
-    min-height: 140px;
   }
 
   .product-card:hover {
