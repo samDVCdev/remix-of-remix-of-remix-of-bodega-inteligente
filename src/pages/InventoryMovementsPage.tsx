@@ -168,7 +168,28 @@ export default function InventoryMovementsPage() {
                             </div>
                           </TableCell>
                           <TableCell className="hidden sm:table-cell text-sm">
-                            {Number(movement.quantity).toFixed(0)}
+                            <div>
+                              <p className="font-medium">{Number(movement.quantity).toFixed(0)} {movement.product?.base_unit || "und"}</p>
+                              {movement.product?.equivalences && movement.product.equivalences.length > 0 && (() => {
+                                const mainEq = movement.product!.equivalences!.find(e => e.display_order === 999)
+                                  || movement.product!.equivalences!.reduce((max, e) =>
+                                    e.base_unit_multiplier > (max?.base_unit_multiplier || 0) ? e : max,
+                                    movement.product!.equivalences![0]
+                                  );
+                                if (mainEq && mainEq.base_unit_multiplier > 1) {
+                                  const qty = Number(movement.quantity);
+                                  const packages = Math.floor(qty / mainEq.base_unit_multiplier);
+                                  const remainder = Math.round(qty % mainEq.base_unit_multiplier);
+                                  return (
+                                    <p className="text-xs text-muted-foreground">
+                                      ≈ {packages > 0 ? `${packages} ${mainEq.unit_name}` : ""}
+                                      {remainder > 0 ? `${packages > 0 ? " + " : ""}${remainder} ${movement.product?.base_unit || "und"}` : ""}
+                                    </p>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
                           </TableCell>
                           <TableCell className="hidden md:table-cell text-sm">
                             <div>

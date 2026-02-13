@@ -17,6 +17,7 @@ import AuditPage from "./pages/AuditPage";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 import InventoryMovementsPage from "./pages/InventoryMovementsPage";
+import CurrencySettingsPage from "./pages/CurrencySettingsPage";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ const App = () => (
               <Route path="/usuarios" element={<ProtectedRoute requireAdmin><UsersPage /></ProtectedRoute>} />
               <Route path="/movimientos-inventario" element={<ProtectedRoute><InventoryMovementsPage /></ProtectedRoute>} />
               <Route path="/auditoria" element={<ProtectedRoute requireAdmin><AuditPage /></ProtectedRoute>} />
+              <Route path="/moneda" element={<ProtectedRoute requireAdmin><CurrencySettingsPage /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

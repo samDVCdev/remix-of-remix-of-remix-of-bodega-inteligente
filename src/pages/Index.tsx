@@ -19,7 +19,7 @@ const Index = () => {
   const { data: stats, isLoading } = useDashboardStats();
   const { data: products, isLoading: productsLoading } = useProductsWithVariants();
   const { data: debtors } = useDebtorsSummary();
-  const { formatPrice } = useCurrency();
+  const { formatPrice, formatDualPrice } = useCurrency();
 
   return (
     <MainLayout>
@@ -55,19 +55,22 @@ const Index = () => {
           />
           <StatCard
             title="Valor Inventario"
-            value={isLoading ? "..." : formatPrice(stats?.totalInventoryValue || 0)}
+            value={isLoading ? "..." : formatDualPrice(stats?.totalInventoryValue || 0).usd}
+            subtitle={isLoading ? "" : formatDualPrice(stats?.totalInventoryValue || 0).ves}
             icon={DollarSign}
             variant="primary"
           />
           <StatCard
             title="Ventas Hoy"
-            value={isLoading ? "..." : formatPrice(stats?.todayIncome || 0)}
+            value={isLoading ? "..." : formatDualPrice(stats?.todayIncome || 0).usd}
+            subtitle={isLoading ? "" : formatDualPrice(stats?.todayIncome || 0).ves}
             icon={TrendingUp}
             variant="success"
           />
           <StatCard
             title="Compras Hoy"
-            value={isLoading ? "..." : formatPrice(stats?.todayExpenses || 0)}
+            value={isLoading ? "..." : formatDualPrice(stats?.todayExpenses || 0).usd}
+            subtitle={isLoading ? "" : formatDualPrice(stats?.todayExpenses || 0).ves}
             icon={TrendingDown}
             variant="warning"
           />

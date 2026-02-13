@@ -34,10 +34,15 @@ export function useDashboardStats() {
       // Calculate stats
       const totalProducts = products?.length || 0;
       
-      const totalInventoryValue = products?.reduce(
-        (sum, p) => sum + (Number(p.sale_price) * Number(p.stock_base_units)), 
-        0
-      ) || 0;
+      const totalInventoryValue = products?.reduce((sum, p) => {
+        if (p.base_unit === 'gramo') {
+          // Weight-based: convert grams to kg, multiply by price_per_kilo
+          const kilos = Number(p.stock_base_units) / 1000;
+          return sum + (kilos * Number(p.price_per_kilo || 0));
+        }
+        // Unit-based: stock * sale_price
+        return sum + (Number(p.sale_price) * Number(p.stock_base_units));
+      }, 0) || 0;
 
       const todayIncome = todayMovements
         ?.filter((m) => m.movement_type === "salida")

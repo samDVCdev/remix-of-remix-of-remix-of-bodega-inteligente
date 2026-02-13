@@ -9,7 +9,7 @@ export function useMovements(type?: "entrada" | "salida") {
     queryFn: async () => {
       let query = supabase
         .from("inventory_movements")
-        .select("*, product:products(*)")
+        .select("*, product:products(*, equivalences:unit_equivalences(*))")
         .order("movement_date", { ascending: false })
         .order("created_at", { ascending: false });
       

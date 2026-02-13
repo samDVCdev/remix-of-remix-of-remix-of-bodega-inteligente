@@ -9,7 +9,8 @@ import {
   Users,
   FileText,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  DollarSign
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ const adminNavigation = [
 ];
 
 const settingsSubNav = [
+  { name: "Moneda", href: "/moneda", icon: DollarSign },
   { name: "Usuarios", href: "/usuarios", icon: Users },
   { name: "Auditoría", href: "/auditoria", icon: FileText },
 ];
