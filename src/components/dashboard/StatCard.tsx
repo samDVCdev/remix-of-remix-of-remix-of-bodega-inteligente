@@ -50,7 +50,16 @@ export function StatCard({ title, value, subtitle, icon: Icon, variant = "defaul
           <p className={cn("text-lg sm:text-2xl lg:text-3xl font-display font-bold truncate", textVariants[variant])}>
             {value}
           </p>
-
+          {subtitle && (
+            <p
+              className={cn(
+                "text-xs sm:text-sm md:text-md truncate",
+                variant === "primary" ? "text-primary-foreground/70" : "text-muted-foreground",
+              )}
+            >
+              {subtitle}
+            </p>
+          )}
           {trend && (
             <p className={cn("text-xs sm:text-sm font-medium", trend.isPositive ? "text-success" : "text-destructive")}>
               {trend.isPositive ? "+" : ""}
