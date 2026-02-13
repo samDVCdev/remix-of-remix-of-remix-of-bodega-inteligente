@@ -12,6 +12,7 @@ import { useCreateProduct, useUpdateProduct } from "@/hooks/useProducts";
 import { Plus, Trash2, Save, Scale, Ruler, Droplets, Package, Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { useCurrency } from "@/hooks/useCurrency";
+import { ProductImageUpload } from "./ProductImageUpload";
 
 // Tipos de medida soportados
 const MEASUREMENT_TYPES = [
@@ -59,6 +60,7 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
   const updateProduct = useUpdateProduct();
   const isEditing = !!product;
   const { exchangeRate } = useCurrency();
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -127,6 +129,7 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
 
   useEffect(() => {
     if (product) {
+      setImageUrl(product.image_url || null);
       // Find the largest equivalence (purchase package)
       const purchaseEquiv = product.equivalences?.reduce((max, e) => 
         e.base_unit_multiplier > (max?.base_unit_multiplier || 0) ? e : max, 
@@ -182,6 +185,7 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
           : [{ unit_name: "Unidad", base_unit_multiplier: 1, price: product.sale_price }],
       });
     } else {
+      setImageUrl(null);
       form.reset({
         name: "",
         measurement_type: "unit",
@@ -275,6 +279,7 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
         low_stock_threshold: lowStockThreshold,
         sale_type: saleType,
         price_per_kilo: pricePerKilo,
+        image_url: imageUrl,
         equivalences,
       };
 
@@ -303,6 +308,9 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Product Image */}
+            <ProductImageUpload imageUrl={imageUrl} onImageChange={setImageUrl} />
+
             {/* Product Name and Measurement Type */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField

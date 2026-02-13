@@ -33,6 +33,7 @@ export interface Product {
   low_stock_threshold: number;
   sale_type: SaleType;
   price_per_kilo: number;
+  image_url: string | null;
   created_at: string;
   updated_at: string;
   variants?: ProductVariant[];
