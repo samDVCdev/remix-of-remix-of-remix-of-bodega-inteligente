@@ -2,17 +2,18 @@ import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TablePagination } from "@/components/ui/table-pagination";
-import { BarChart3, Download, FileText, FileSpreadsheet } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BarChart3, Download, FileSpreadsheet, AlertTriangle, TrendingUp, CreditCard, Clock, Banknote } from "lucide-react";
 import { useMovements } from "@/hooks/useMovements";
+import { useProducts } from "@/hooks/useProducts";
 import { useCurrency } from "@/hooks/useCurrency";
-import { usePagination } from "@/hooks/usePagination";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { cn } from "@/lib/utils";
 import { exportMovementsToExcel, exportMovementsToPDF } from "@/lib/exportUtils";
+import { ReportLowStock } from "@/components/reports/ReportLowStock";
+import { ReportTopProducts } from "@/components/reports/ReportTopProducts";
+import { ReportCredits } from "@/components/reports/ReportCredits";
+import { ReportSalesHeatmap } from "@/components/reports/ReportSalesHeatmap";
+import { ReportPaymentMethods } from "@/components/reports/ReportPaymentMethods";
 
 export default function ReportsPage() {
   const [startDate, setStartDate] = useState(
@@ -21,42 +22,30 @@ export default function ReportsPage() {
   const [endDate, setEndDate] = useState(
     new Date().toISOString().split("T")[0]
   );
-  const [filterType, setFilterType] = useState<string>("todos");
 
-  const { data: movements, isLoading } = useMovements();
-  const { formatPrice, currencySymbol } = useCurrency();
+  const { data: movements, isLoading: movementsLoading } = useMovements();
+  const { data: products, isLoading: productsLoading } = useProducts();
+  const { formatPrice } = useCurrency();
 
   const filteredMovements = movements?.filter((m) => {
     const movementDate = new Date(m.movement_date);
     const start = new Date(startDate);
     const end = new Date(endDate);
     end.setHours(23, 59, 59, 999);
-
-    const dateMatch = movementDate >= start && movementDate <= end;
-    const typeMatch = filterType === "todos" || m.movement_type === filterType;
-
-    return dateMatch && typeMatch;
-  });
-
-  const totalEntradas = filteredMovements
-    ?.filter((m) => m.movement_type === "entrada")
-    .reduce((sum, m) => sum + Number(m.total_amount), 0) || 0;
+    return movementDate >= start && movementDate <= end;
+  }) || [];
 
   const totalVentas = filteredMovements
-    ?.filter((m) => m.movement_type === "salida")
-    .reduce((sum, m) => sum + Number(m.total_amount), 0) || 0;
+    .filter((m) => m.movement_type === "salida")
+    .reduce((sum, m) => sum + Number(m.total_amount), 0);
 
-  const balance = totalVentas - totalEntradas;
+  const totalCompras = filteredMovements
+    .filter((m) => m.movement_type === "entrada")
+    .reduce((sum, m) => sum + Number(m.total_amount), 0);
 
-  const {
-    paginatedData: paginatedMovements,
-    currentPage,
-    totalPages,
-    totalItems,
-    itemsPerPage,
-    onPageChange,
-    onItemsPerPageChange,
-  } = usePagination(filteredMovements, { initialItemsPerPage: 20 });
+  const balance = totalVentas - totalCompras;
+
+  const isLoading = movementsLoading || productsLoading;
 
   return (
     <MainLayout>
@@ -70,24 +59,24 @@ export default function ReportsPage() {
               </div>
               Reportes
             </h1>
-            <p className="text-muted-foreground mt-1 text-sm sm:text-base">Genera reportes de movimientos</p>
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base">Panel completo de reportes y análisis</p>
           </div>
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => filteredMovements && exportMovementsToExcel(filteredMovements, startDate, endDate)}
-              disabled={!filteredMovements?.length}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => filteredMovements.length && exportMovementsToExcel(filteredMovements, startDate, endDate)}
+              disabled={!filteredMovements.length}
               className="gap-1"
             >
               <FileSpreadsheet className="w-4 h-4" />
               <span className="hidden sm:inline">Excel</span>
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => filteredMovements && exportMovementsToPDF(filteredMovements, startDate, endDate)}
-              disabled={!filteredMovements?.length}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => filteredMovements.length && exportMovementsToPDF(filteredMovements, startDate, endDate)}
+              disabled={!filteredMovements.length}
               className="gap-1"
             >
               <Download className="w-4 h-4" />
@@ -96,10 +85,10 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Date Filters */}
         <div className="stat-card">
-          <h3 className="font-display font-semibold mb-4">Filtros</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <h3 className="font-display font-semibold mb-4">Período</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Fecha Inicio</label>
               <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
@@ -107,17 +96,6 @@ export default function ReportsPage() {
             <div>
               <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Fecha Fin</label>
               <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Tipo</label>
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-popover">
-                  <SelectItem value="todos">Todos</SelectItem>
-                  <SelectItem value="entrada">Entradas</SelectItem>
-                  <SelectItem value="salida">Ventas</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </div>
         </div>
@@ -130,85 +108,61 @@ export default function ReportsPage() {
           </div>
           <div className="stat-card bg-warning/5 border-warning/20">
             <p className="text-sm font-medium text-muted-foreground">Total Compras</p>
-            <p className="text-xl sm:text-2xl font-display font-bold text-warning">{formatPrice(totalEntradas)}</p>
+            <p className="text-xl sm:text-2xl font-display font-bold text-warning">{formatPrice(totalCompras)}</p>
           </div>
-          <div className={cn("stat-card", balance >= 0 ? "bg-success/5 border-success/20" : "bg-destructive/5 border-destructive/20")}>
+          <div className={`stat-card ${balance >= 0 ? "bg-success/5 border-success/20" : "bg-destructive/5 border-destructive/20"}`}>
             <p className="text-sm font-medium text-muted-foreground">Balance</p>
-            <p className={cn("text-xl sm:text-2xl font-display font-bold", balance >= 0 ? "text-success" : "text-destructive")}>
+            <p className={`text-xl sm:text-2xl font-display font-bold ${balance >= 0 ? "text-success" : "text-destructive"}`}>
               {balance >= 0 ? "+" : ""}{formatPrice(balance)}
             </p>
           </div>
         </div>
 
-        {/* Movements Table */}
-        <div className="stat-card p-0 overflow-hidden">
-          <div className="p-4 border-b border-border">
-            <h3 className="font-display font-semibold">Movimientos ({filteredMovements?.length || 0})</h3>
-          </div>
+        {/* Tabs */}
+        <Tabs defaultValue="stock" className="w-full">
+          <TabsList className="w-full flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
+            <TabsTrigger value="stock" className="flex items-center gap-1.5 text-xs sm:text-sm">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              Stock Bajo
+            </TabsTrigger>
+            <TabsTrigger value="ranking" className="flex items-center gap-1.5 text-xs sm:text-sm">
+              <TrendingUp className="w-3.5 h-3.5" />
+              Ranking
+            </TabsTrigger>
+            <TabsTrigger value="credits" className="flex items-center gap-1.5 text-xs sm:text-sm">
+              <CreditCard className="w-3.5 h-3.5" />
+              Fiados
+            </TabsTrigger>
+            <TabsTrigger value="hours" className="flex items-center gap-1.5 text-xs sm:text-sm">
+              <Clock className="w-3.5 h-3.5" />
+              Horas
+            </TabsTrigger>
+            <TabsTrigger value="payments" className="flex items-center gap-1.5 text-xs sm:text-sm">
+              <Banknote className="w-3.5 h-3.5" />
+              Métodos
+            </TabsTrigger>
+          </TabsList>
 
-          {isLoading ? (
-            <div className="p-8 text-center text-muted-foreground">Cargando...</div>
-          ) : filteredMovements?.length === 0 ? (
-            <div className="p-12 text-center">
-              <FileText className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-              <p className="text-muted-foreground">No hay movimientos en el período</p>
-            </div>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="table-header">
-                      <TableHead>Fecha</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead className="hidden sm:table-cell">Producto</TableHead>
-                      <TableHead>Cant.</TableHead>
-                      <TableHead className="hidden sm:table-cell">P.Unit</TableHead>
-                      <TableHead>Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedMovements?.map((movement) => (
-                      <TableRow key={movement.id}>
-                        <TableCell className="text-xs sm:text-sm">{format(new Date(movement.movement_date), "dd/MM/yy")}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", movement.movement_type === "entrada" ? "bg-success/15 text-success" : "bg-primary/15 text-primary")}>
-                              {movement.movement_type === "entrada" ? "E" : "V"}
-                            </span>
-                            {movement.is_credit && (
-                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/15 text-amber-500">
-                                F
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell max-w-[150px] truncate">{movement.product?.name}</TableCell>
-                        <TableCell>{Number(movement.quantity).toFixed(0)}</TableCell>
-                        <TableCell className="hidden sm:table-cell">{formatPrice(Number(movement.unit_price))}</TableCell>
-                        <TableCell className={cn("font-semibold", movement.movement_type === "entrada" ? "text-warning" : "text-success")}>
-                          {formatPrice(Number(movement.total_amount))}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              
-              {totalItems > 0 && (
-                <TablePagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  totalItems={totalItems}
-                  itemsPerPage={itemsPerPage}
-                  onPageChange={onPageChange}
-                  onItemsPerPageChange={onItemsPerPageChange}
-                  itemsPerPageOptions={[20, 50, 100]}
-                />
-              )}
-            </>
-          )}
-        </div>
+          <TabsContent value="stock">
+            <ReportLowStock products={products || []} isLoading={isLoading} />
+          </TabsContent>
+
+          <TabsContent value="ranking">
+            <ReportTopProducts movements={filteredMovements} products={products || []} isLoading={isLoading} />
+          </TabsContent>
+
+          <TabsContent value="credits">
+            <ReportCredits movements={filteredMovements} isLoading={isLoading} />
+          </TabsContent>
+
+          <TabsContent value="hours">
+            <ReportSalesHeatmap movements={filteredMovements} isLoading={isLoading} />
+          </TabsContent>
+
+          <TabsContent value="payments">
+            <ReportPaymentMethods movements={filteredMovements} isLoading={isLoading} />
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );
