@@ -53,7 +53,7 @@ export function StatCard({ title, value, subtitle, icon: Icon, variant = "defaul
           {subtitle && (
             <p
               className={cn(
-                "text-xs sm:text-sm md:text-md truncate",
+                "text-xs text-bold sm:text-sm md:text-md truncate",
                 variant === "primary" ? "text-primary-foreground/70" : "text-muted-foreground",
               )}
             >
