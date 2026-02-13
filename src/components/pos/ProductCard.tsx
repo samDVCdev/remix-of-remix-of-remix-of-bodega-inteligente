@@ -45,7 +45,7 @@ export function ProductCard({ product, onSelect }: ProductCardProps) {
       )}
 
       {/* Product Image or Icon */}
-      <div className="w-full aspect-square rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden mb-2">
+      <div className="w-full aspect-[4/3] rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden mb-2">
         {product.image_url ? (
           <img
             src={product.image_url}
@@ -56,11 +56,11 @@ export function ProductCard({ product, onSelect }: ProductCardProps) {
         ) : (
           <div className="flex items-center justify-center">
             {product.sale_type === 'weight' ? (
-              <Scale className="w-10 h-10 text-primary/40" />
+              <Scale className="w-7 h-7 text-primary/40" />
             ) : product.sale_type === 'variants' ? (
-              <Layers className="w-10 h-10 text-accent/40" />
+              <Layers className="w-7 h-7 text-accent/40" />
             ) : (
-              <Package className="w-10 h-10 text-muted-foreground/40" />
+              <Package className="w-7 h-7 text-muted-foreground/40" />
             )}
           </div>
         )}
