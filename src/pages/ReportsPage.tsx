@@ -2,9 +2,10 @@ import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, Download, FileSpreadsheet, AlertTriangle, TrendingUp, CreditCard, Clock, Banknote } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { BarChart3, Download, FileSpreadsheet, AlertTriangle, TrendingUp, CreditCard, Clock, Banknote, List } from "lucide-react";
 import { useMovements } from "@/hooks/useMovements";
 import { useProducts } from "@/hooks/useProducts";
 import { useCurrency } from "@/hooks/useCurrency";
@@ -14,6 +15,10 @@ import { ReportTopProducts } from "@/components/reports/ReportTopProducts";
 import { ReportCredits } from "@/components/reports/ReportCredits";
 import { ReportSalesHeatmap } from "@/components/reports/ReportSalesHeatmap";
 import { ReportPaymentMethods } from "@/components/reports/ReportPaymentMethods";
+import { usePagination } from "@/hooks/usePagination";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 export default function ReportsPage() {
   const [startDate, setStartDate] = useState(
@@ -25,7 +30,7 @@ export default function ReportsPage() {
 
   const { data: movements, isLoading: movementsLoading } = useMovements();
   const { data: products, isLoading: productsLoading } = useProducts();
-  const { formatPrice } = useCurrency();
+  const { formatPrice, formatDualPrice, exchangeRate } = useCurrency();
 
   const filteredMovements = movements?.filter((m) => {
     const movementDate = new Date(m.movement_date);
@@ -46,6 +51,10 @@ export default function ReportsPage() {
   const balance = totalVentas - totalCompras;
 
   const isLoading = movementsLoading || productsLoading;
+
+  // Pagination for movements table
+  const pagination = usePagination(filteredMovements, { initialItemsPerPage: 15 });
+  const paginatedMovements = pagination.paginatedData;
 
   return (
     <MainLayout>
@@ -100,27 +109,36 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        {/* Summary Cards */}
+        {/* Summary Cards - Dual Currency */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="stat-card bg-success/5 border-success/20">
             <p className="text-sm font-medium text-muted-foreground">Total Ventas</p>
-            <p className="text-xl sm:text-2xl font-display font-bold text-success">{formatPrice(totalVentas)}</p>
+            <p className="text-xl sm:text-2xl font-display font-bold text-success">${totalVentas.toFixed(2)}</p>
+            <p className="text-sm text-muted-foreground">Bs. {(totalVentas * exchangeRate).toFixed(2)}</p>
           </div>
           <div className="stat-card bg-warning/5 border-warning/20">
             <p className="text-sm font-medium text-muted-foreground">Total Compras</p>
-            <p className="text-xl sm:text-2xl font-display font-bold text-warning">{formatPrice(totalCompras)}</p>
+            <p className="text-xl sm:text-2xl font-display font-bold text-warning">${totalCompras.toFixed(2)}</p>
+            <p className="text-sm text-muted-foreground">Bs. {(totalCompras * exchangeRate).toFixed(2)}</p>
           </div>
           <div className={`stat-card ${balance >= 0 ? "bg-success/5 border-success/20" : "bg-destructive/5 border-destructive/20"}`}>
             <p className="text-sm font-medium text-muted-foreground">Balance</p>
             <p className={`text-xl sm:text-2xl font-display font-bold ${balance >= 0 ? "text-success" : "text-destructive"}`}>
-              {balance >= 0 ? "+" : ""}{formatPrice(balance)}
+              {balance >= 0 ? "+" : ""}${balance.toFixed(2)}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {balance >= 0 ? "+" : ""}Bs. {(balance * exchangeRate).toFixed(2)}
             </p>
           </div>
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="stock" className="w-full">
+        <Tabs defaultValue="movements" className="w-full">
           <TabsList className="w-full flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
+            <TabsTrigger value="movements" className="flex items-center gap-1.5 text-xs sm:text-sm">
+              <List className="w-3.5 h-3.5" />
+              Movimientos
+            </TabsTrigger>
             <TabsTrigger value="stock" className="flex items-center gap-1.5 text-xs sm:text-sm">
               <AlertTriangle className="w-3.5 h-3.5" />
               Stock Bajo
@@ -142,6 +160,74 @@ export default function ReportsPage() {
               Métodos
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="movements">
+            <div className="stat-card p-0 overflow-hidden">
+              <div className="p-4 border-b border-border">
+                <h3 className="font-display font-semibold">Movimientos del Período ({filteredMovements.length})</h3>
+              </div>
+              {isLoading ? (
+                <div className="p-8 text-center text-muted-foreground">Cargando...</div>
+              ) : filteredMovements.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground">No hay movimientos en este período</div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="table-header">
+                          <TableHead>Fecha</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Producto</TableHead>
+                          <TableHead>Cant.</TableHead>
+                          <TableHead>P. Unit (USD)</TableHead>
+                          <TableHead>Total (USD)</TableHead>
+                          <TableHead>Total (Bs)</TableHead>
+                          <TableHead>Notas</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedMovements.map((m) => (
+                          <TableRow key={m.id}>
+                            <TableCell className="text-xs whitespace-nowrap">
+                              {format(new Date(m.movement_date), "dd/MM/yy HH:mm")}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={m.movement_type === "salida" ? "default" : "secondary"} className="text-[10px]">
+                                {m.movement_type === "salida" ? "Venta" : "Entrada"}
+                              </Badge>
+                              {m.is_credit && (
+                                <Badge variant="outline" className="text-[10px] ml-1 border-warning text-warning">F</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="font-medium text-sm max-w-[120px] truncate">
+                              {m.product?.name || "—"}
+                            </TableCell>
+                            <TableCell className="text-sm">{m.quantity}</TableCell>
+                            <TableCell className="text-sm">${Number(m.unit_price).toFixed(2)}</TableCell>
+                            <TableCell className="text-sm font-semibold">${Number(m.total_amount).toFixed(2)}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              Bs. {(Number(m.total_amount) * exchangeRate).toFixed(2)}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">
+                              {m.notes || "—"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <TablePagination
+                    currentPage={pagination.currentPage}
+                    totalPages={pagination.totalPages}
+                    onPageChange={pagination.onPageChange}
+                    totalItems={filteredMovements.length}
+                    itemsPerPage={15}
+                  />
+                </>
+              )}
+            </div>
+          </TabsContent>
 
           <TabsContent value="stock">
             <ReportLowStock products={products || []} isLoading={isLoading} />
