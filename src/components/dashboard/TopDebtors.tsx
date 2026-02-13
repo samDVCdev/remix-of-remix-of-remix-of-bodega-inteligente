@@ -13,7 +13,7 @@ interface TopDebtorsProps {
 }
 
 export function TopDebtors({ debtors }: TopDebtorsProps) {
-  const { formatPrice } = useCurrency();
+  const { formatDualPrice } = useCurrency();
 
   if (debtors.length === 0) {
     return (
@@ -52,12 +52,18 @@ export function TopDebtors({ debtors }: TopDebtorsProps) {
                 {debtor.customer_name || "Sin nombre"}
               </p>
               <p className="text-xs text-muted-foreground">
-                Pagado: {formatPrice(debtor.amount_paid)}
+                Pagado: {formatDualPrice(debtor.amount_paid).usd}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {formatDualPrice(debtor.amount_paid).ves}
               </p>
             </div>
             <div className="text-right shrink-0 ml-2">
               <p className="font-semibold text-warning text-sm">
-                {formatPrice(debtor.total_debt)}
+                {formatDualPrice(debtor.total_debt).usd}
+              </p>
+              <p className="text-xs text-warning/70">
+                {formatDualPrice(debtor.total_debt).ves}
               </p>
               <p className="text-xs text-muted-foreground">
                 {debtor.debt_percentage.toFixed(0)}% pendiente

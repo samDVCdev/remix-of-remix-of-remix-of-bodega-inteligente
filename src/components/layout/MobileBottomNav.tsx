@@ -43,6 +43,7 @@ export function MobileBottomNav() {
     { name: "Ventas", href: "/ventas", icon: List },
     { name: "Reportes", href: "/reportes", icon: BarChart3 },
     { name: "Cuentas", href: "/cuentas-por-cobrar", icon: CreditCard },
+    { name: "Moneda", href: "/moneda", icon: BarChart3 },
     { name: "Usuarios", href: "/usuarios", icon: Users },
     { name: "Auditoría", href: "/auditoria", icon: Shield },
   ];
