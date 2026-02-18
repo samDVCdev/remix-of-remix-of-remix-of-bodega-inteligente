@@ -1,6 +1,8 @@
 import { Users, ShoppingCart, DollarSign, Package } from "lucide-react";
 import { InventoryMovement } from "@/types/inventory";
 import { useCurrency } from "@/hooks/useCurrency";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   BarChart,
   Bar,
@@ -48,6 +50,23 @@ const CustomTooltip = ({ active, payload, label, formatPrice }: any) => {
 export function ReportSellerStats({ movements, isLoading }: ReportSellerStatsProps) {
   const { formatPrice } = useCurrency();
 
+  // Fetch profiles to resolve user names from UUIDs
+  const { data: profiles } = useQuery({
+    queryKey: ["profiles-for-sellers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, username");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const profileMap: Record<string, string> = {};
+  profiles?.forEach((p) => {
+    profileMap[p.user_id] = p.full_name || p.username || "Sin nombre";
+  });
+
   // Only sales (salida)
   const sales = movements.filter((m) => m.movement_type === "salida");
 
@@ -56,7 +75,7 @@ export function ReportSellerStats({ movements, isLoading }: ReportSellerStatsPro
 
   sales.forEach((m) => {
     const key = m.sold_by || "__unknown__";
-    const name = (m as any).seller_name || m.sold_by || "Sin asignar";
+    const name = m.sold_by ? (profileMap[m.sold_by] || m.sold_by) : "Sin asignar";
     if (!bySeller[key]) {
       bySeller[key] = { name, sales: 0, revenue: 0, products: {} };
     }
