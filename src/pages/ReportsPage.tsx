@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, Download, FileSpreadsheet, AlertTriangle, TrendingUp, CreditCard, Clock, Banknote, List } from "lucide-react";
+import { BarChart3, Download, FileSpreadsheet, AlertTriangle, TrendingUp, CreditCard, Clock, Banknote, List, Users } from "lucide-react";
 import { useMovements } from "@/hooks/useMovements";
 import { useProducts } from "@/hooks/useProducts";
 import { useCurrency } from "@/hooks/useCurrency";
@@ -15,6 +15,7 @@ import { ReportTopProducts } from "@/components/reports/ReportTopProducts";
 import { ReportCredits } from "@/components/reports/ReportCredits";
 import { ReportSalesHeatmap } from "@/components/reports/ReportSalesHeatmap";
 import { ReportPaymentMethods } from "@/components/reports/ReportPaymentMethods";
+import { ReportSellerStats } from "@/components/reports/ReportSellerStats";
 import { usePagination } from "@/hooks/usePagination";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { format } from "date-fns";
@@ -159,6 +160,10 @@ export default function ReportsPage() {
               <Banknote className="w-3.5 h-3.5" />
               Métodos
             </TabsTrigger>
+            <TabsTrigger value="sellers" className="flex items-center gap-1.5 text-xs sm:text-sm">
+              <Users className="w-3.5 h-3.5" />
+              Vendedores
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="movements">
@@ -247,6 +252,10 @@ export default function ReportsPage() {
 
           <TabsContent value="payments">
             <ReportPaymentMethods movements={filteredMovements} isLoading={isLoading} />
+          </TabsContent>
+
+          <TabsContent value="sellers">
+            <ReportSellerStats movements={filteredMovements} isLoading={isLoading} />
           </TabsContent>
         </Tabs>
       </div>
