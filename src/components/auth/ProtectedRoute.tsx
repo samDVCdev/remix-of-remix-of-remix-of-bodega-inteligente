@@ -22,8 +22,9 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
     return <Navigate to="/auth" replace />;
   }
 
+  // Employees can only access POS and non-admin routes
   if (requireAdmin && !isAdmin) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/pos" replace />;
   }
 
   return <>{children}</>;

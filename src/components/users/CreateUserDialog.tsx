@@ -37,35 +37,22 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
     setIsLoading(true);
 
     try {
-      // Create user via Supabase Auth admin API
-      // Note: This will only work if we have proper admin privileges
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-          }
+      // Use edge function so admin session is NOT replaced
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({ email, password, fullName, role }),
         }
-      });
+      );
 
-      if (error) throw error;
-
-      if (data.user) {
-        // Update the role if not the default
-        if (role === "admin") {
-          await supabase
-            .from("user_roles")
-            .update({ role })
-            .eq("user_id", data.user.id);
-        }
-
-        // Update the profile name
-        await supabase
-          .from("profiles")
-          .update({ full_name: fullName })
-          .eq("user_id", data.user.id);
-      }
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Error al crear usuario");
 
       toast.success("Usuario creado exitosamente");
       setEmail("");
@@ -76,10 +63,10 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
       onSuccess();
     } catch (error: any) {
       console.error("Error creating user:", error);
-      if (error.message?.includes("already registered")) {
+      if (error.message?.includes("already registered") || error.message?.includes("already been registered")) {
         toast.error("El correo ya está registrado");
       } else {
-        toast.error("Error al crear el usuario");
+        toast.error(error.message || "Error al crear el usuario");
       }
     } finally {
       setIsLoading(false);

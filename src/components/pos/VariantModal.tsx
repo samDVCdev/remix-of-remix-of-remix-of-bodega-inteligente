@@ -19,13 +19,23 @@ export function VariantModal({ open, onOpenChange, product, onConfirm }: Variant
 
   if (!product) return null;
 
+  const availableStock = product.stock_base_units ?? product.stock;
+
+  const getVariantUnitsNeeded = (variant: ProductVariant, qty: number) => {
+    return (variant.units_count || 1) * qty;
+  };
+
+  const isVariantAvailable = (variant: ProductVariant, qty: number) => {
+    return getVariantUnitsNeeded(variant, qty) <= availableStock;
+  };
+
   const handleSelectVariant = (variant: ProductVariant) => {
     setSelectedVariant(variant);
     setQuantity(1);
   };
 
   const handleConfirm = () => {
-    if (selectedVariant && quantity > 0) {
+    if (selectedVariant && quantity > 0 && isVariantAvailable(selectedVariant, quantity)) {
       onConfirm(product, selectedVariant, quantity);
       setSelectedVariant(null);
       setQuantity(1);
@@ -54,20 +64,34 @@ export function VariantModal({ open, onOpenChange, product, onConfirm }: Variant
         <div className="space-y-4 py-4">
           {/* Variants list */}
           <div className="space-y-2">
-            {product.variants?.map((variant) => (
-              <button
-                key={variant.id}
-                onClick={() => handleSelectVariant(variant)}
-                className={`w-full p-4 rounded-xl border transition-all flex items-center justify-between ${
-                  selectedVariant?.id === variant.id
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-primary/50'
-                }`}
-              >
-                <span className="font-medium">{variant.name}</span>
-                <span className="text-primary font-bold">{formatPrice(variant.price)}</span>
-              </button>
-            ))}
+            {product.variants?.map((variant) => {
+              const maxQty = Math.floor(availableStock / (variant.units_count || 1));
+              const noStock = maxQty <= 0;
+              return (
+                <button
+                  key={variant.id}
+                  onClick={() => !noStock && handleSelectVariant(variant)}
+                  disabled={noStock}
+                  className={`w-full p-4 rounded-xl border transition-all flex items-center justify-between ${
+                    noStock
+                      ? 'border-border opacity-50 cursor-not-allowed bg-muted/20'
+                      : selectedVariant?.id === variant.id
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <div className="flex flex-col items-start">
+                    <span className="font-medium">{variant.name}</span>
+                    {noStock ? (
+                      <span className="text-xs text-destructive font-medium">Sin stock</span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Disponibles: {maxQty}</span>
+                    )}
+                  </div>
+                  <span className={noStock ? "text-muted-foreground font-bold" : "text-primary font-bold"}>{formatPrice(variant.price)}</span>
+                </button>
+              );
+            })}
           </div>
 
           {/* Quantity selector (shown after variant selection) */}
@@ -89,7 +113,11 @@ export function VariantModal({ open, onOpenChange, product, onConfirm }: Variant
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => setQuantity(quantity + 1)}
+                  onClick={() => {
+                    const nextQty = quantity + 1;
+                    if (isVariantAvailable(selectedVariant, nextQty)) setQuantity(nextQty);
+                  }}
+                  disabled={!isVariantAvailable(selectedVariant, quantity + 1)}
                   className="h-12 w-12"
                 >
                   <Plus className="w-5 h-5" />

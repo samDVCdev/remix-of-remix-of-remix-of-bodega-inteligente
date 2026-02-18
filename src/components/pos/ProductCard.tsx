@@ -79,10 +79,10 @@ export function ProductCard({ product, onSelect }: ProductCardProps) {
       {/* Price + Add button */}
       <div className="flex items-end justify-between w-full mt-auto">
         <div className="text-left">
-          <p className="text-sm font-bold text-primary">
+          <p className="text-base font-bold text-primary leading-tight">
             {dual.usd}{suffix}
           </p>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground font-medium">
             {dual.ves}{suffix}
           </p>
         </div>
