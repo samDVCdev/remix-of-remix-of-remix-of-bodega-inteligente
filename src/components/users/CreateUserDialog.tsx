@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shield, User } from "lucide-react";
+import { Shield, User, AtSign } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -16,18 +16,45 @@ interface CreateUserDialogProps {
 
 export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDialogProps) {
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<"admin" | "empleado">("empleado");
   const [isLoading, setIsLoading] = useState(false);
+  const [usernameError, setUsernameError] = useState("");
+
+  const validateUsername = (value: string) => {
+    if (!value) { setUsernameError("El usuario es requerido"); return false; }
+    if (value.length < 3) { setUsernameError("Mínimo 3 caracteres"); return false; }
+    if (value.length > 30) { setUsernameError("Máximo 30 caracteres"); return false; }
+    if (!/^[a-zA-Z0-9_-]+$/.test(value)) {
+      setUsernameError("Solo letras, números, - y _");
+      return false;
+    }
+    setUsernameError("");
+    return true;
+  };
+
+  const handleUsernameChange = (value: string) => {
+    setUsername(value);
+    validateUsername(value);
+  };
+
+  const handleClose = () => {
+    setEmail(""); setUsername(""); setPassword("");
+    setFullName(""); setRole("empleado"); setUsernameError("");
+    onOpenChange(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!email || !password || !fullName) {
+
+    if (!email || !password || !fullName || !username) {
       toast.error("Todos los campos son requeridos");
       return;
     }
+
+    if (!validateUsername(username)) return;
 
     if (password.length < 6) {
       toast.error("La contraseña debe tener al menos 6 caracteres");
@@ -37,7 +64,6 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
     setIsLoading(true);
 
     try {
-      // Use edge function so admin session is NOT replaced
       const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`,
@@ -47,7 +73,7 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
             "Content-Type": "application/json",
             "Authorization": `Bearer ${session?.access_token}`,
           },
-          body: JSON.stringify({ email, password, fullName, role }),
+          body: JSON.stringify({ email, password, fullName, username: username.toLowerCase(), role }),
         }
       );
 
@@ -55,31 +81,23 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
       if (!response.ok) throw new Error(result.error || "Error al crear usuario");
 
       toast.success("Usuario creado exitosamente");
-      setEmail("");
-      setPassword("");
-      setFullName("");
-      setRole("empleado");
-      onOpenChange(false);
+      handleClose();
       onSuccess();
     } catch (error: any) {
       console.error("Error creating user:", error);
-      if (error.message?.includes("already registered") || error.message?.includes("already been registered")) {
-        toast.error("El correo ya está registrado");
-      } else {
-        toast.error(error.message || "Error al crear el usuario");
-      }
+      toast.error(error.message || "Error al crear el usuario");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[450px] lg:max-w-[500px] bg-card mx-4">
         <DialogHeader>
           <DialogTitle>Crear Nuevo Usuario</DialogTitle>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="fullName">Nombre Completo *</Label>
@@ -90,6 +108,27 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
               placeholder="Juan Pérez"
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="username">Nombre de Usuario *</Label>
+            <div className="relative">
+              <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                id="username"
+                value={username}
+                onChange={(e) => handleUsernameChange(e.target.value)}
+                placeholder="juanperez"
+                className="pl-10"
+                required
+              />
+            </div>
+            {usernameError && (
+              <p className="text-xs text-destructive">{usernameError}</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Solo letras, números, guiones y guiones bajos (3-30 caracteres)
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -141,10 +180,10 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }: CreateUserDi
           </div>
 
           <DialogFooter className="pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={handleClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading || !!usernameError}>
               {isLoading ? "Creando..." : "Crear Usuario"}
             </Button>
           </DialogFooter>

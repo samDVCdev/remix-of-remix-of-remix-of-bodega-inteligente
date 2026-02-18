@@ -154,9 +154,14 @@ export default function UsersPage() {
                               <User className="w-4 h-4 text-muted-foreground" />
                             )}
                           </div>
-                          <span className="font-medium truncate max-w-[150px]">
-                            {user.full_name || "Sin nombre"}
-                          </span>
+                          <div>
+                            <span className="font-medium truncate max-w-[150px] block">
+                              {user.full_name || "Sin nombre"}
+                            </span>
+                            {(user as any).username && (
+                              <span className="text-xs text-muted-foreground">@{(user as any).username}</span>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell text-muted-foreground">

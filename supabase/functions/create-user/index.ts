@@ -11,7 +11,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Verify the calling user is an admin
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -36,7 +35,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check admin role
     const { data: roleData } = await callerClient
       .from("user_roles")
       .select("role")
@@ -50,18 +48,55 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { email, password, fullName, role } = await req.json();
+    const { email, password, fullName, username, role } = await req.json();
 
-    if (!email || !password || !fullName) {
+    if (!email || !password || !fullName || !username) {
       return new Response(JSON.stringify({ error: "Missing fields" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Use service role to create user without affecting current session
+    // Validate username format (only letters, numbers, underscores, hyphens)
+    const usernameRegex = /^[a-zA-Z0-9_-]{3,30}$/;
+    if (!usernameRegex.test(username)) {
+      return new Response(JSON.stringify({ error: "El nombre de usuario solo puede contener letras, números, guiones y guiones bajos (3-30 caracteres)" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
+    // Check if username already exists
+    const { data: existingUsername } = await adminClient
+      .from("profiles")
+      .select("id")
+      .ilike("username", username)
+      .maybeSingle();
+
+    if (existingUsername) {
+      return new Response(JSON.stringify({ error: "El nombre de usuario ya está en uso" }), {
+        status: 409,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Check if email already exists
+    const { data: existingEmail } = await adminClient
+      .from("profiles")
+      .select("id")
+      .ilike("email", email)
+      .maybeSingle();
+
+    if (existingEmail) {
+      return new Response(JSON.stringify({ error: "El correo electrónico ya está registrado" }), {
+        status: 409,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Create user in auth
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
       email,
       password,
@@ -71,13 +106,13 @@ Deno.serve(async (req) => {
 
     if (createError) throw createError;
 
-    // Update profile name
+    // Update profile with full name, username and email
     await adminClient
       .from("profiles")
-      .update({ full_name: fullName })
+      .update({ full_name: fullName, username: username.toLowerCase(), email })
       .eq("user_id", newUser.user.id);
 
-    // Set the role if admin
+    // Set the role
     if (role === "admin") {
       await adminClient
         .from("user_roles")
