@@ -63,7 +63,9 @@ export default function AuthPage() {
       navigate("/");
     } catch (error: any) {
       const msg = error.message || "";
-      if (msg.includes("Invalid login credentials") || msg.includes("invalid_credentials")) {
+      if (msg === "USER_DEACTIVATED") {
+        toast.error("Tu cuenta está desactivada. Contacta al administrador.");
+      } else if (msg.includes("Invalid login credentials") || msg.includes("invalid_credentials")) {
         toast.error("Credenciales incorrectas");
       } else {
         toast.error("Error al iniciar sesión");
