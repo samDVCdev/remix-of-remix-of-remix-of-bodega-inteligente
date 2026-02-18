@@ -13,14 +13,7 @@ interface StatCardProps {
   };
 }
 
-export function StatCard({ 
-  title, 
-  value, 
-  subtitle,
-  icon: Icon, 
-  variant = "default",
-  trend 
-}: StatCardProps) {
+export function StatCard({ title, value, subtitle, icon: Icon, variant = "default", trend }: StatCardProps) {
   const variants = {
     default: "stat-card",
     primary: "stat-card-accent",
@@ -46,32 +39,31 @@ export function StatCard({
     <div className={cn(variants[variant], "animate-fade-in min-w-0")}>
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-1 sm:space-y-2 min-w-0 flex-1">
-          <p className={cn(
-            "text-xs sm:text-sm font-medium truncate",
-            variant === "primary" ? "text-primary-foreground/80" : "text-muted-foreground"
-          )}>
+          <p
+            className={cn(
+              "text-xs sm:text-sm font-medium truncate",
+              variant === "primary" ? "text-primary-foreground/80" : "text-muted-foreground",
+            )}
+          >
             {title}
           </p>
-          <p className={cn(
-            "text-lg sm:text-2xl lg:text-3xl font-display font-bold truncate", 
-            textVariants[variant]
-          )}>
+          <p className={cn("text-lg sm:text-2xl lg:text-3xl font-display font-bold truncate", textVariants[variant])}>
             {value}
           </p>
           {subtitle && (
-            <p className={cn(
-              "text-xs sm:text-sm truncate",
-              variant === "primary" ? "text-primary-foreground/70" : "text-muted-foreground"
-            )}>
+            <p
+              className={cn(
+                "text-xs font-bold sm:text-sm md:text-md truncate",
+                variant === "primary" ? "text-primary-foreground/70" : "text-muted-foreground",
+              )}
+            >
               {subtitle}
             </p>
           )}
           {trend && (
-            <p className={cn(
-              "text-xs sm:text-sm font-medium",
-              trend.isPositive ? "text-success" : "text-destructive"
-            )}>
-              {trend.isPositive ? "+" : ""}{trend.value}%
+            <p className={cn("text-xs sm:text-sm font-medium", trend.isPositive ? "text-success" : "text-destructive")}>
+              {trend.isPositive ? "+" : ""}
+              {trend.value}%
             </p>
           )}
         </div>
