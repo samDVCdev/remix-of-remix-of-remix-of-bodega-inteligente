@@ -34,13 +34,26 @@ export function EquivalenceModal({ open, onOpenChange, product, onConfirm }: Equ
 
   if (!product) return null;
 
+  // Calculate available stock in base units
+  const availableStock = product.stock_base_units ?? product.stock;
+
+  // Check if a given equivalence+quantity is available in stock
+  const getUnitsNeeded = (eq: UnitEquivalence | null, qty: number) => {
+    if (!eq) return qty;
+    return eq.base_unit_multiplier * qty;
+  };
+
+  const isQuantityAvailable = (eq: UnitEquivalence | null, qty: number) => {
+    return getUnitsNeeded(eq, qty) <= availableStock;
+  };
+
   const handleSelectEquivalence = (equivalence: UnitEquivalence) => {
     setSelectedEquivalence(equivalence);
     setQuantity(1);
   };
 
   const handleConfirm = () => {
-    if (quantity > 0) {
+    if (quantity > 0 && isQuantityAvailable(selectedEquivalence, quantity)) {
       onConfirm(product, selectedEquivalence, quantity);
       setSelectedEquivalence(null);
       setQuantity(1);
@@ -74,25 +87,37 @@ export function EquivalenceModal({ open, onOpenChange, product, onConfirm }: Equ
         <div className="space-y-4 py-4">
           {/* Options list - Only show sale equivalences, no separate base unit option */}
           <div className="space-y-2">
-            {saleEquivalences.map((eq) => (
-              <button
-                key={eq.id}
-                onClick={() => handleSelectEquivalence(eq)}
-                className={`w-full p-4 rounded-xl border transition-all flex items-center justify-between ${
-                  selectedEquivalence?.id === eq.id
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-primary/50'
-                }`}
-              >
-                <div className="flex flex-col items-start">
-                  <span className="font-medium capitalize">{eq.unit_name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    = {eq.base_unit_multiplier} {product.base_unit}(s)
-                  </span>
-                </div>
-                <span className="text-primary font-bold">{formatPrice(eq.price)}</span>
-              </button>
-            ))}
+            {saleEquivalences.map((eq) => {
+              const maxQty = Math.floor(availableStock / eq.base_unit_multiplier);
+              const noStock = maxQty <= 0;
+              return (
+                <button
+                  key={eq.id}
+                  onClick={() => !noStock && handleSelectEquivalence(eq)}
+                  disabled={noStock}
+                  className={`w-full p-4 rounded-xl border transition-all flex items-center justify-between ${
+                    noStock
+                      ? 'border-border opacity-50 cursor-not-allowed bg-muted/20'
+                      : selectedEquivalence?.id === eq.id
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <div className="flex flex-col items-start">
+                    <span className="font-medium capitalize">{eq.unit_name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      = {eq.base_unit_multiplier} {product.base_unit}(s)
+                    </span>
+                    {noStock ? (
+                      <span className="text-xs text-destructive font-medium">Sin stock</span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Disponibles: {maxQty}</span>
+                    )}
+                  </div>
+                  <span className={noStock ? "text-muted-foreground font-bold" : "text-primary font-bold"}>{formatPrice(eq.price)}</span>
+                </button>
+              );
+            })}
           </div>
 
           {/* Quantity selector */}
@@ -113,7 +138,11 @@ export function EquivalenceModal({ open, onOpenChange, product, onConfirm }: Equ
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setQuantity(quantity + 1)}
+                onClick={() => {
+                  const nextQty = quantity + 1;
+                  if (isQuantityAvailable(selectedEquivalence, nextQty)) setQuantity(nextQty);
+                }}
+                disabled={!isQuantityAvailable(selectedEquivalence, quantity + 1)}
                 className="h-12 w-12"
               >
                 <Plus className="w-5 h-5" />
