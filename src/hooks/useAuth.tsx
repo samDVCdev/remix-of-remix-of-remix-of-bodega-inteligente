@@ -25,31 +25,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<{ full_name: string | null } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchUserData = async (userId: string) => {
+  const fetchUserData = async (userId: string): Promise<boolean> => {
     try {
+      // Fetch profile (includes is_active)
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("full_name, is_active")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      // If user is deactivated, sign them out immediately
+      if (profileData && profileData.is_active === false) {
+        await supabase.auth.signOut();
+        setUser(null);
+        setSession(null);
+        setRole(null);
+        setProfile(null);
+        return false;
+      }
+
+      if (profileData) {
+        setProfile({ full_name: profileData.full_name });
+      }
+
       // Fetch role
       const { data: roleData } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", userId)
         .maybeSingle();
-      
+
       if (roleData) {
         setRole(roleData.role as AppRole);
       }
 
-      // Fetch profile
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("user_id", userId)
-        .maybeSingle();
-      
-      if (profileData) {
-        setProfile(profileData);
-      }
+      return true;
     } catch (error) {
       console.error("Error fetching user data:", error);
+      return true;
     }
   };
 
@@ -100,11 +113,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     if (error) throw error;
+
+    // Check if user is active right after login
+    if (data.user) {
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("is_active")
+        .eq("user_id", data.user.id)
+        .maybeSingle();
+
+      if (profileData && profileData.is_active === false) {
+        await supabase.auth.signOut();
+        throw new Error("USER_DEACTIVATED");
+      }
+    }
   };
 
   const signOut = async () => {
