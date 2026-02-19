@@ -58,43 +58,50 @@ export function NetworkStatus() {
     };
   }, [wasOffline]);
 
-  // Always show when offline
-  if (!isOnline) {
-    return (
-      <div className="fixed top-0 left-0 right-0 z-[100] bg-destructive text-destructive-foreground shadow-lg animate-fade-in">
-        <div className="flex items-center justify-center gap-3 py-2.5 px-4">
-          <CloudOff className="w-4 h-4 shrink-0" />
-          <span className="text-sm font-semibold">Modo Offline</span>
-          <span className="text-xs opacity-80">— Los datos se cargan desde la caché local</span>
-        </div>
-      </div>
-    );
-  }
+  const bannerConfig = !isOnline
+    ? {
+        icon: CloudOff,
+        label: "Sin conexión",
+        detail: "Datos desde caché",
+        className: "bg-destructive/10 border-destructive/30 text-destructive",
+        iconSpin: false,
+      }
+    : showOnlineBanner
+    ? {
+        icon: Wifi,
+        label: "Conexión restaurada",
+        detail: "Sincronizando...",
+        className: "bg-success/10 border-success/30 text-success",
+        iconSpin: false,
+      }
+    : isSlowNetwork
+    ? {
+        icon: Loader2,
+        label: "Red lenta",
+        detail: null,
+        className: "bg-warning/10 border-warning/30 text-warning",
+        iconSpin: true,
+      }
+    : null;
 
-  // Show "connection restored" briefly
-  if (showOnlineBanner) {
-    return (
-      <div className="fixed top-0 left-0 right-0 z-[100] bg-success text-success-foreground shadow-lg animate-fade-in">
-        <div className="flex items-center justify-center gap-3 py-2.5 px-4">
-          <Wifi className="w-4 h-4 shrink-0" />
-          <span className="text-sm font-semibold">Conexión restaurada</span>
-          <span className="text-xs opacity-80">— Sincronizando datos...</span>
-        </div>
-      </div>
-    );
-  }
+  if (!bannerConfig) return null;
 
-  // Show slow network warning
-  if (isSlowNetwork) {
-    return (
-      <div className="fixed top-0 left-0 right-0 z-[100] bg-warning text-warning-foreground shadow-lg">
-        <div className="flex items-center justify-center gap-2 py-2 px-4">
-          <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-          <span className="text-sm font-medium">Conexión lenta detectada</span>
-        </div>
-      </div>
-    );
-  }
+  const { icon: BannerIcon, label, detail, className, iconSpin } = bannerConfig;
 
-  return null;
+  return (
+    <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[100] animate-fade-in max-w-[95vw] sm:max-w-sm">
+      <div
+        className={cn(
+          "flex items-center gap-2 px-3 py-1.5 rounded-full border backdrop-blur-md shadow-sm text-xs font-medium",
+          className
+        )}
+      >
+        <BannerIcon className={cn("w-3.5 h-3.5 shrink-0", iconSpin && "animate-spin")} />
+        <span>{label}</span>
+        {detail && (
+          <span className="opacity-70 hidden sm:inline">— {detail}</span>
+        )}
+      </div>
+    </div>
+  );
 }
