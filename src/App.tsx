@@ -19,7 +19,23 @@ import NotFound from "./pages/NotFound";
 import InventoryMovementsPage from "./pages/InventoryMovementsPage";
 import CurrencySettingsPage from "./pages/CurrencySettingsPage";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 min
+      gcTime: 1000 * 60 * 60 * 24, // 24h - keep data in cache for offline
+      retry: (failureCount, error: any) => {
+        // Don't retry when offline
+        if (!navigator.onLine) return false;
+        return failureCount < 3;
+      },
+      networkMode: 'offlineFirst',
+    },
+    mutations: {
+      networkMode: 'offlineFirst',
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
