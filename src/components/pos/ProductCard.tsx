@@ -45,7 +45,7 @@ export function ProductCard({ product, onSelect }: ProductCardProps) {
       )}
 
       {/* Product Image or Icon */}
-      <div className="w-full aspect-[4/3] rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden mb-2">
+      <div className="w-full aspect-[3/2] lg:aspect-[2/1] rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden mb-2">
         {product.image_url ? (
           <img
             src={product.image_url}
@@ -79,10 +79,10 @@ export function ProductCard({ product, onSelect }: ProductCardProps) {
       {/* Price + Add button */}
       <div className="flex items-end justify-between w-full mt-auto">
         <div className="text-left">
-          <p className="text-base font-bold text-primary leading-tight">
+          <p className="text-base lg:text-xl font-bold text-primary leading-tight">
             {dual.usd}{suffix}
           </p>
-          <p className="text-xs text-muted-foreground font-medium">
+          <p className="text-xs lg:text-sm text-muted-foreground font-medium">
             {dual.ves}{suffix}
           </p>
         </div>
