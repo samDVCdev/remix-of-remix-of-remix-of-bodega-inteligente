@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DollarSign, RefreshCw, Edit3 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,13 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export default function CurrencySettingsPage() {
-  const { rateMode, setRateMode, manualRate, setManualRate, exchangeRate, isLoading } = useCurrency();
+  const { rateMode, setRateMode, manualRate, setManualRate, exchangeRate, isLoading, savingRate } = useCurrency();
   const [tempRate, setTempRate] = useState(String(manualRate));
+
+  // Sync tempRate when manualRate changes from DB
+  useEffect(() => {
+    setTempRate(String(manualRate));
+  }, [manualRate]);
 
   const handleSaveManualRate = () => {
     const rate = parseFloat(tempRate);
