@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Package, ShoppingCart, CreditCard, MoreHorizontal, LayoutDashboard, List, BarChart3, Users, Shield, ChevronUp } from "lucide-react";
+import { Package, ShoppingCart, CreditCard, MoreHorizontal, LayoutDashboard, List, BarChart3, Users, Shield, ChevronUp, LogOut, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { LucideIcon } from "lucide-react";
@@ -18,13 +18,19 @@ export function MobileBottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
-  const { isAdmin } = useAuth();
+  const { isAdmin, signOut, profile } = useAuth();
+
+  const handleSignOut = async () => {
+    setIsMoreOpen(false);
+    await signOut();
+    navigate("/auth");
+  };
 
   const employeeNavItems: NavItem[] = [
     { name: "Productos", href: "/productos", icon: Package },
     { name: "Vender", href: "/pos", icon: ShoppingCart, isCenter: true },
     { name: "Ventas", href: "/ventas", icon: List },
-    { name: "Cuentas", href: "/cuentas-por-cobrar", icon: CreditCard },
+    { name: "Más", href: "#more", icon: MoreHorizontal, isMore: true },
   ];
 
   const adminNavItems: NavItem[] = [
@@ -35,7 +41,15 @@ export function MobileBottomNav() {
     { name: "Más", href: "#more", icon: MoreHorizontal, isMore: true },
   ];
 
-  const allModules = [
+  const employeeModules = [
+    { name: "POS", href: "/pos", icon: ShoppingCart },
+    { name: "Productos", href: "/productos", icon: Package },
+    { name: "Ventas", href: "/ventas", icon: List },
+    { name: "Cuentas", href: "/cuentas-por-cobrar", icon: CreditCard },
+    { name: "Movimientos", href: "/movimientos-inventario", icon: List },
+  ];
+
+  const adminModules = [
     { name: "Inicio", href: "/", icon: LayoutDashboard },
     { name: "POS", href: "/pos", icon: ShoppingCart },
     { name: "Productos", href: "/productos", icon: Package },
@@ -43,10 +57,12 @@ export function MobileBottomNav() {
     { name: "Ventas", href: "/ventas", icon: List },
     { name: "Reportes", href: "/reportes", icon: BarChart3 },
     { name: "Cuentas", href: "/cuentas-por-cobrar", icon: CreditCard },
-    { name: "Moneda", href: "/moneda", icon: BarChart3 },
+    { name: "Moneda", href: "/moneda", icon: DollarSign },
     { name: "Usuarios", href: "/usuarios", icon: Users },
     { name: "Auditoría", href: "/auditoria", icon: Shield },
   ];
+
+  const allModules = isAdmin ? adminModules : employeeModules;
 
   const navItems = isAdmin ? adminNavItems : employeeNavItems;
 
@@ -197,6 +213,22 @@ export function MobileBottomNav() {
                     </Link>
                   );
                 })}
+              </div>
+
+              {/* Logout button */}
+              <div className="px-6 pb-8 pt-2 border-t border-border/50">
+                <button
+                  onClick={handleSignOut}
+                  className="flex items-center gap-3 w-full py-3 px-4 rounded-xl text-destructive hover:bg-destructive/10 transition-colors"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <div className="text-left">
+                    <span className="text-sm font-medium">Cerrar sesión</span>
+                    {profile?.full_name && (
+                      <p className="text-[11px] text-muted-foreground">{profile.full_name}</p>
+                    )}
+                  </div>
+                </button>
               </div>
             </motion.div>
           </>
