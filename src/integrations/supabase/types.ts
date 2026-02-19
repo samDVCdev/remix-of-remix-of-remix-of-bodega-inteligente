@@ -74,6 +74,30 @@ export type Database = {
         }
         Relationships: []
       }
+      currency_settings: {
+        Row: {
+          id: string
+          manual_rate: number
+          rate_mode: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          manual_rate?: number
+          rate_mode?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          manual_rate?: number
+          rate_mode?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       inventory_movements: {
         Row: {
           amount_paid: number
