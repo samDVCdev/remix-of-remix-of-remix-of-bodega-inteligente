@@ -169,6 +169,7 @@ interface FullReportData {
   startDate: string;
   endDate: string;
   exchangeRate: number;
+  profileMap?: Record<string, string>;
 }
 
 function addPageHeader(doc: jsPDF, title: string, subtitle?: string) {
@@ -197,8 +198,57 @@ function drawSummaryBox(doc: jsPDF, x: number, y: number, w: number, label: stri
   doc.setTextColor(0, 0, 0);
 }
 
+// Draw a horizontal bar chart in the PDF
+function drawBarChart(
+  doc: jsPDF,
+  x: number, y: number, width: number, maxHeight: number,
+  items: { label: string; value: number }[],
+  color: [number, number, number],
+  title: string,
+  valuePrefix = '$'
+) {
+  if (items.length === 0) return y;
+
+  doc.setFontSize(11);
+  doc.setTextColor(60, 60, 60);
+  doc.text(title, x, y);
+  y += 6;
+
+  const maxVal = Math.max(...items.map(i => i.value), 1);
+  const barHeight = Math.min(10, (maxHeight - 10) / items.length);
+  const labelWidth = 50;
+  const barAreaWidth = width - labelWidth - 50;
+
+  items.forEach((item, i) => {
+    const barY = y + i * (barHeight + 3);
+    // Label
+    doc.setFontSize(7);
+    doc.setTextColor(80, 80, 80);
+    const truncLabel = item.label.length > 18 ? item.label.slice(0, 18) + '…' : item.label;
+    doc.text(truncLabel, x, barY + barHeight - 2);
+
+    // Bar
+    const barW = Math.max(2, (item.value / maxVal) * barAreaWidth);
+    const alpha = 0.5 + (0.5 * (1 - i / items.length));
+    doc.setFillColor(
+      Math.round(color[0] * alpha + 255 * (1 - alpha)),
+      Math.round(color[1] * alpha + 255 * (1 - alpha)),
+      Math.round(color[2] * alpha + 255 * (1 - alpha))
+    );
+    doc.roundedRect(x + labelWidth, barY, barW, barHeight - 1, 1, 1, 'F');
+
+    // Value label
+    doc.setFontSize(7);
+    doc.setTextColor(60, 60, 60);
+    doc.text(`${valuePrefix}${item.value.toFixed(valuePrefix === '' ? 0 : 2)}`, x + labelWidth + barW + 3, barY + barHeight - 2);
+  });
+
+  doc.setTextColor(0, 0, 0);
+  return y + items.length * (barHeight + 3) + 6;
+}
+
 export function exportFullReportPDF(data: FullReportData) {
-  const { movements, products, startDate, endDate, exchangeRate } = data;
+  const { movements, products, startDate, endDate, exchangeRate, profileMap = {} } = data;
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -566,7 +616,7 @@ export function exportFullReportPDF(data: FullReportData) {
   const bySeller: Record<string, { name: string; salesCount: number; revenue: number }> = {};
   sales.forEach(m => {
     const key = m.sold_by || '__unknown__';
-    const name = m.seller_name || m.sold_by || 'Sin asignar';
+    const name = (m.sold_by && profileMap[m.sold_by]) ? profileMap[m.sold_by] : (m.seller_name || 'Sin asignar');
     if (!bySeller[key]) bySeller[key] = { name, salesCount: 0, revenue: 0 };
     bySeller[key].salesCount++;
     bySeller[key].revenue += Number(m.total_amount);
@@ -591,6 +641,52 @@ export function exportFullReportPDF(data: FullReportData) {
   } else {
     doc.setFontSize(10);
     doc.text('No hay ventas registradas en el período', 14, 38);
+  }
+
+  // ===== PAGE: GRÁFICOS DE BARRAS =====
+  doc.addPage();
+  addPageHeader(doc, 'Gráficos Comparativos', 'Visualización de los datos más relevantes del período');
+
+  let chartY = 36;
+
+  // Bar chart 1: Top 10 más vendidos por cantidad
+  const topChartItems = top10.slice(0, 8).map(p => ({ label: p.name, value: p.qty }));
+  if (topChartItems.length > 0) {
+    chartY = drawBarChart(doc, 14, chartY, pageWidth - 28, 120, topChartItems, [22, 163, 74], 'Top Productos Más Vendidos (cantidad)', '');
+  }
+
+  // Bar chart 2: Top 10 por ingresos
+  const topRevenueItems = [...Object.values(salesByProduct)]
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 8)
+    .map(p => ({ label: p.name, value: p.revenue }));
+  if (topRevenueItems.length > 0) {
+    if (chartY > 180) { doc.addPage(); chartY = 20; addPageHeader(doc, 'Gráficos Comparativos (cont.)', ''); chartY = 36; }
+    chartY = drawBarChart(doc, 14, chartY, pageWidth - 28, 120, topRevenueItems, [59, 130, 246], 'Top Productos por Ingresos (USD)', '$');
+  }
+
+  // Bar chart 3: Vendedores por ingresos
+  const sellerChartItems = sellerList.slice(0, 8).map(s => ({ label: s.name, value: s.revenue }));
+  if (sellerChartItems.length > 0) {
+    if (chartY > 180) { doc.addPage(); chartY = 20; addPageHeader(doc, 'Gráficos Comparativos (cont.)', ''); chartY = 36; }
+    chartY = drawBarChart(doc, 14, chartY, pageWidth - 28, 120, sellerChartItems, [234, 88, 12], 'Ingresos por Vendedor (USD)', '$');
+  }
+
+  // Bar chart 4: Métodos de pago
+  const paymentChartItems = Object.entries(methods)
+    .filter(([, v]) => v.count > 0)
+    .sort((a, b) => b[1].amount - a[1].amount)
+    .map(([key, v]) => ({ label: key, value: v.amount }));
+  if (paymentChartItems.length > 0) {
+    if (chartY > 180) { doc.addPage(); chartY = 20; addPageHeader(doc, 'Gráficos Comparativos (cont.)', ''); chartY = 36; }
+    chartY = drawBarChart(doc, 14, chartY, pageWidth - 28, 120, paymentChartItems, [139, 92, 246], 'Distribución por Método de Pago (USD)', '$');
+  }
+
+  // Bar chart 5: Deudores principales
+  const debtorChartItems = debtors.slice(0, 8).map(d => ({ label: d.name, value: d.due }));
+  if (debtorChartItems.length > 0) {
+    if (chartY > 180) { doc.addPage(); chartY = 20; addPageHeader(doc, 'Gráficos Comparativos (cont.)', ''); chartY = 36; }
+    chartY = drawBarChart(doc, 14, chartY, pageWidth - 28, 120, debtorChartItems, [220, 38, 38], 'Principales Deudores — Pendiente (USD)', '$');
   }
 
   // ===== LAST PAGES: LISTA DE MOVIMIENTOS =====

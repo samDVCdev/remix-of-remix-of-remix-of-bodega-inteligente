@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +34,18 @@ export default function ReportsPage() {
   const { data: movements, isLoading: movementsLoading } = useMovements();
   const { data: products, isLoading: productsLoading } = useProducts();
   const { formatPrice, formatDualPrice, exchangeRate } = useCurrency();
+
+  // Fetch profiles for seller name resolution in PDF
+  const { data: profiles } = useQuery({
+    queryKey: ["profiles-for-pdf"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("user_id, full_name, username");
+      if (error) throw error;
+      return data;
+    },
+  });
+  const profileMap: Record<string, string> = {};
+  profiles?.forEach(p => { profileMap[p.user_id] = p.full_name || p.username || 'Sin nombre'; });
 
   const filteredMovements = movements?.filter((m) => {
     const movementDate = new Date(m.movement_date);
@@ -91,6 +105,7 @@ export default function ReportsPage() {
                 startDate,
                 endDate,
                 exchangeRate,
+                profileMap,
               })}
               disabled={!filteredMovements.length}
               className="gap-1"
