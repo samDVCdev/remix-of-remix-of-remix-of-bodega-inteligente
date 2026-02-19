@@ -57,6 +57,14 @@ export function useUpdateUserRole() {
       
       if (error) throw error;
 
+      // Obtener nombre del usuario afectado
+      const { data: targetProfile } = await supabase
+        .from("profiles")
+        .select("full_name, username")
+        .eq("user_id", userId)
+        .single();
+      const targetName = targetProfile?.full_name || targetProfile?.username || "Usuario desconocido";
+
       // Log audit event
       const { data: { user } } = await supabase.auth.getUser();
       await supabase
@@ -65,7 +73,7 @@ export function useUpdateUserRole() {
           action: 'USER_ROLE_UPDATED',
           entity_type: 'user_roles',
           user_id: user?.id,
-          details: { target_user_id: userId, new_role: role }
+          details: { target_user_name: targetName, new_role: role }
         });
     },
     onSuccess: () => {
@@ -112,6 +120,14 @@ export function useToggleUserStatus() {
       
       if (error) throw error;
 
+      // Obtener nombre del usuario afectado
+      const { data: targetProfile } = await supabase
+        .from("profiles")
+        .select("full_name, username")
+        .eq("user_id", userId)
+        .single();
+      const targetName = targetProfile?.full_name || targetProfile?.username || "Usuario desconocido";
+
       // Log audit event
       const { data: { user } } = await supabase.auth.getUser();
       await supabase
@@ -120,7 +136,7 @@ export function useToggleUserStatus() {
           action: isActive ? 'USER_ACTIVATED' : 'USER_DEACTIVATED',
           entity_type: 'profiles',
           user_id: user?.id,
-          details: { target_user_id: userId }
+          details: { target_user_name: targetName, estado: isActive ? 'activado' : 'desactivado' }
         });
     },
     onSuccess: (_, { isActive }) => {

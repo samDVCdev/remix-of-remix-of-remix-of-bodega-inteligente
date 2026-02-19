@@ -232,6 +232,15 @@ export function useRegisterGroupPayment() {
       // Log audit event
       try {
         const { data: { user } } = await supabase.auth.getUser();
+
+        // Obtener nombre del cliente del primer movimiento
+        const { data: firstMovement } = await supabase
+          .from("inventory_movements")
+          .select("customer_name")
+          .eq("id", accountIds[0])
+          .single();
+        const customerName = firstMovement?.customer_name || "Cliente desconocido";
+
         await supabase
           .from("audit_logs" as any)
           .insert({
@@ -240,9 +249,10 @@ export function useRegisterGroupPayment() {
             entity_id: accountIds[0],
             user_id: user?.id,
             details: { 
-              account_ids: accountIds, 
-              total_payment: totalAmount,
-              fully_paid: allPaid 
+              customer_name: customerName,
+              monto_pagado: totalAmount,
+              cuentas_afectadas: accountIds.length,
+              saldado_completamente: allPaid 
             }
           });
       } catch (e) {
