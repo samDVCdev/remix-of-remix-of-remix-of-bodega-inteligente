@@ -1,4 +1,4 @@
-import { FileText, User, ShoppingCart, Package, CreditCard, Store, ChevronDown, ChevronUp } from "lucide-react";
+import { FileText, User, ShoppingCart, Package, CreditCard, Store, ChevronDown, ChevronUp, UserCheck, UserX, Banknote } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TablePagination } from "@/components/ui/table-pagination";
@@ -14,22 +14,34 @@ const ACTION_ICONS: Record<string, typeof FileText> = {
   ENTRY_CREATED: Package,
   PAYMENT_REGISTERED: CreditCard,
   USER_ROLE_UPDATED: User,
+  USER_ACTIVATED: UserCheck,
+  USER_DEACTIVATED: UserX,
   BUSINESS_OPENED: Store,
   BUSINESS_CLOSED: Store,
+  GROUP_PAYMENT_COMPLETED: Banknote,
+  GROUP_PARTIAL_PAYMENT: Banknote,
 };
 
 const ACTION_BADGE: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
   SALE_CREATED: { label: "Venta", variant: "default" },
   ENTRY_CREATED: { label: "Entrada", variant: "secondary" },
   PAYMENT_REGISTERED: { label: "Pago", variant: "outline" },
-  USER_ROLE_UPDATED: { label: "Usuario", variant: "outline" },
+  USER_ROLE_UPDATED: { label: "Rol cambiado", variant: "outline" },
+  USER_ACTIVATED: { label: "Usuario activado", variant: "secondary" },
+  USER_DEACTIVATED: { label: "Usuario desactivado", variant: "destructive" },
   BUSINESS_OPENED: { label: "Apertura", variant: "secondary" },
   BUSINESS_CLOSED: { label: "Cierre", variant: "destructive" },
+  GROUP_PAYMENT_COMPLETED: { label: "Deuda saldada", variant: "default" },
+  GROUP_PARTIAL_PAYMENT: { label: "Abono parcial", variant: "outline" },
 };
 
 /** Genera una descripción legible para cada tipo de evento */
 function buildDescription(action: string, details: Record<string, unknown> | null): string {
-  if (!details) return "—";
+  if (!details) {
+    if (action === "BUSINESS_OPENED") return "Abrió el negocio para el día";
+    if (action === "BUSINESS_CLOSED") return "Cerró el negocio";
+    return "—";
+  }
 
   switch (action) {
     case "SALE_CREATED": {
@@ -52,21 +64,50 @@ function buildDescription(action: string, details: Record<string, unknown> | nul
       return `Registró pago${amount ? ` de ${amount}` : ""} de ${customer}`;
     }
     case "USER_ROLE_UPDATED": {
-      const target = details.target_user || details.user || "usuario";
-      const role = details.new_role || details.role || "";
-      return `Cambió rol de ${target}${role ? ` a "${role}"` : ""}`;
+      const target = details.target_user_name || details.target_user || details.user || "usuario";
+      const role = details.new_role === "admin" ? "Administrador" : details.new_role === "empleado" ? "Empleado" : details.new_role || "";
+      return `Cambió el rol de ${target}${role ? ` a "${role}"` : ""}`;
+    }
+    case "USER_ACTIVATED": {
+      const target = details.target_user_name || "usuario";
+      return `Activó la cuenta de ${target}`;
+    }
+    case "USER_DEACTIVATED": {
+      const target = details.target_user_name || "usuario";
+      return `Desactivó la cuenta de ${target}`;
     }
     case "BUSINESS_OPENED":
       return "Abrió el negocio para el día";
     case "BUSINESS_CLOSED":
       return "Cerró el negocio";
+    case "GROUP_PAYMENT_COMPLETED": {
+      const customer = details.customer_name || "cliente";
+      const amount = details.monto_pagado != null ? `$${Number(details.monto_pagado).toFixed(2)}` : "";
+      const count = details.cuentas_afectadas ? ` (${details.cuentas_afectadas} cuenta${Number(details.cuentas_afectadas) > 1 ? 's' : ''})` : "";
+      return `Saldó deuda completa de ${customer}${amount ? ` — ${amount}` : ""}${count}`;
+    }
+    case "GROUP_PARTIAL_PAYMENT": {
+      const customer = details.customer_name || "cliente";
+      const amount = details.monto_pagado != null ? `$${Number(details.monto_pagado).toFixed(2)}` : "";
+      const count = details.cuentas_afectadas ? ` (${details.cuentas_afectadas} cuenta${Number(details.cuentas_afectadas) > 1 ? 's' : ''})` : "";
+      return `Registró abono de ${customer}${amount ? ` — ${amount}` : ""}${count}`;
+    }
     default: {
-      // Fallback: construir texto desde los campos disponibles
+      // Fallback inteligente: evitar mostrar IDs/UUIDs
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const parts = Object.entries(details)
-        .filter(([, v]) => v !== null && v !== undefined && v !== "")
-        .slice(0, 3)
-        .map(([k, v]) => `${k}: ${v}`);
-      return parts.join(" · ") || "—";
+        .filter(([, v]) => {
+          if (v === null || v === undefined || v === "") return false;
+          if (typeof v === "string" && uuidRegex.test(v)) return false;
+          if (Array.isArray(v)) return false;
+          return true;
+        })
+        .slice(0, 4)
+        .map(([k, v]) => {
+          const label = k.replace(/_/g, " ");
+          return `${label}: ${v}`;
+        });
+      return parts.join(" · ") || "Sin detalles";
     }
   }
 }
