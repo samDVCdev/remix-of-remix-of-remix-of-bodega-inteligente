@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,6 +20,7 @@ import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 import InventoryMovementsPage from "./pages/InventoryMovementsPage";
 import CurrencySettingsPage from "./pages/CurrencySettingsPage";
+import { SplashScreen } from "@/components/layout/SplashScreen";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,10 +43,20 @@ const queryClient = new QueryClient({
 restoreQueryCache(queryClient);
 
 const App = () => {
+  const [showSplash, setShowSplash] = useState(() => {
+    // Only show splash once per session
+    const shown = sessionStorage.getItem("kiosko_splash_shown");
+    return !shown;
+  });
+
+  const handleSplashComplete = useCallback(() => {
+    setShowSplash(false);
+    sessionStorage.setItem("kiosko_splash_shown", "1");
+  }, []);
+
   useEffect(() => {
     const cleanup = persistQueryCache(queryClient);
     
-    // Re-fetch all when sync completes
     const handleSyncComplete = () => {
       queryClient.invalidateQueries();
     };
@@ -56,6 +67,10 @@ const App = () => {
       window.removeEventListener("offline-sync-complete", handleSyncComplete);
     };
   }, []);
+
+  if (showSplash) {
+    return <SplashScreen onComplete={handleSplashComplete} />;
+  }
 
   return (
   <QueryClientProvider client={queryClient}>
