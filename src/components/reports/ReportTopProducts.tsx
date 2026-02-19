@@ -56,7 +56,11 @@ export function ReportTopProducts({ movements, products, isLoading }: ReportTopP
     .sort((a, b) => b.qty - a.qty);
 
   const topSelling = ranked.slice(0, 10);
-  const leastSelling = [...ranked].sort((a, b) => a.qty - b.qty).slice(0, 10);
+  const topSellingIds = new Set(topSelling.map((item) => item.product!.id));
+  const leastSelling = [...ranked]
+    .filter((item) => !topSellingIds.has(item.product!.id))
+    .sort((a, b) => a.qty - b.qty)
+    .slice(0, 10);
 
   const soldProductIds = new Set(Object.keys(salesByProduct));
   const noSalesProducts = products.filter((p) => !soldProductIds.has(p.id));
