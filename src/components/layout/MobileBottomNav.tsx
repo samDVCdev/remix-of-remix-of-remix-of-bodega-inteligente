@@ -21,9 +21,13 @@ export function MobileBottomNav() {
   const { isAdmin, signOut, profile } = useAuth();
 
   const handleSignOut = async () => {
-    setIsMoreOpen(false);
-    await signOut();
-    navigate("/auth");
+    try {
+      await signOut();
+      setIsMoreOpen(false);
+      navigate("/auth");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
   const employeeNavItems: NavItem[] = [
