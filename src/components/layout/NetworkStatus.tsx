@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
-import { Wifi, WifiOff, Loader2, CloudOff } from "lucide-react";
+import { Wifi, WifiOff, Loader2, CloudOff, CloudUpload } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getOfflineQueue } from "@/lib/offlineQueue";
 
 export function NetworkStatus() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSlowNetwork, setIsSlowNetwork] = useState(false);
   const [showOnlineBanner, setShowOnlineBanner] = useState(false);
   const [wasOffline, setWasOffline] = useState(false);
+  const [pendingCount, setPendingCount] = useState(getOfflineQueue().length);
 
   useEffect(() => {
     const handleOnline = () => {
@@ -24,6 +26,10 @@ export function NetworkStatus() {
       setShowOnlineBanner(false);
     };
 
+    const handleQueueChange = () => {
+      setPendingCount(getOfflineQueue().length);
+    };
+
     const checkNetworkSpeed = () => {
       const connection = (navigator as any).connection ||
         (navigator as any).mozConnection ||
@@ -39,6 +45,8 @@ export function NetworkStatus() {
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
+    window.addEventListener("offline-queue-change", handleQueueChange);
+    window.addEventListener("offline-sync-complete", handleQueueChange);
     checkNetworkSpeed();
 
     const connection =
@@ -52,6 +60,8 @@ export function NetworkStatus() {
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("offline-queue-change", handleQueueChange);
+      window.removeEventListener("offline-sync-complete", handleQueueChange);
       if (connection) {
         connection.removeEventListener("change", checkNetworkSpeed);
       }
@@ -62,17 +72,17 @@ export function NetworkStatus() {
     ? {
         icon: CloudOff,
         label: "Sin conexión",
-        detail: "Datos desde caché",
+        detail: pendingCount > 0 ? `${pendingCount} pendiente(s)` : "Datos desde caché",
         className: "bg-destructive/10 border-destructive/30 text-destructive",
         iconSpin: false,
       }
     : showOnlineBanner
     ? {
-        icon: Wifi,
+        icon: pendingCount > 0 ? CloudUpload : Wifi,
         label: "Conexión restaurada",
-        detail: "Sincronizando...",
+        detail: pendingCount > 0 ? "Sincronizando..." : null,
         className: "bg-success/10 border-success/30 text-success",
-        iconSpin: false,
+        iconSpin: pendingCount > 0,
       }
     : isSlowNetwork
     ? {
@@ -99,7 +109,7 @@ export function NetworkStatus() {
         <BannerIcon className={cn("w-3.5 h-3.5 shrink-0", iconSpin && "animate-spin")} />
         <span>{label}</span>
         {detail && (
-          <span className="opacity-70 hidden sm:inline">— {detail}</span>
+          <span className="opacity-70">— {detail}</span>
         )}
       </div>
     </div>

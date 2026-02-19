@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CurrencyProvider } from "@/hooks/useCurrency";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { persistQueryCache, restoreQueryCache } from "@/lib/queryPersistence";
 import Index from "./pages/Index";
 import ProductsPage from "./pages/ProductsPage";
 import SalesPage from "./pages/SalesPage";
@@ -23,9 +25,8 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 min
-      gcTime: 1000 * 60 * 60 * 24, // 24h - keep data in cache for offline
+      gcTime: 1000 * 60 * 60 * 24, // 24h
       retry: (failureCount, error: any) => {
-        // Don't retry when offline
         if (!navigator.onLine) return false;
         return failureCount < 3;
       },
@@ -37,7 +38,26 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => (
+// Restore cache on startup
+restoreQueryCache(queryClient);
+
+const App = () => {
+  useEffect(() => {
+    const cleanup = persistQueryCache(queryClient);
+    
+    // Re-fetch all when sync completes
+    const handleSyncComplete = () => {
+      queryClient.invalidateQueries();
+    };
+    window.addEventListener("offline-sync-complete", handleSyncComplete);
+    
+    return () => {
+      cleanup();
+      window.removeEventListener("offline-sync-complete", handleSyncComplete);
+    };
+  }, []);
+
+  return (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <CurrencyProvider>
@@ -65,6 +85,7 @@ const App = () => (
       </CurrencyProvider>
     </AuthProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
