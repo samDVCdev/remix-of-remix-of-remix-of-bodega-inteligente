@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { InventoryMovement } from "@/types/inventory";
 import { toast } from "sonner";
+import { addToOfflineQueue } from "@/lib/offlineQueue";
 
 export function useMovements(type?: "entrada" | "salida") {
   return useQuery({
@@ -45,26 +46,37 @@ export function useCreateMovement() {
 
   return useMutation({
     mutationFn: async (data: CreateMovementData) => {
-      // Use provided total_amount or fallback to quantity * unit_price
       const total_amount = data.total_amount ?? (data.quantity * data.unit_price);
       
+      const insertData = {
+        product_id: data.product_id,
+        movement_type: data.movement_type,
+        quantity: data.quantity,
+        unit_price: data.unit_price,
+        movement_date: data.movement_date,
+        notes: data.notes,
+        is_credit: data.is_credit || false,
+        is_paid: !data.is_credit,
+        customer_name: data.customer_name,
+        sold_by: data.sold_by,
+        unit_equivalence_id: data.unit_equivalence_id,
+        credit_group_id: data.credit_group_id,
+        total_amount,
+      };
+
+      // If offline, queue the mutation
+      if (!navigator.onLine) {
+        addToOfflineQueue({
+          table: "inventory_movements",
+          operation: "insert",
+          data: insertData,
+        });
+        return insertData;
+      }
+
       const { data: result, error } = await supabase
         .from("inventory_movements")
-        .insert({ 
-          product_id: data.product_id,
-          movement_type: data.movement_type,
-          quantity: data.quantity,
-          unit_price: data.unit_price,
-          movement_date: data.movement_date,
-          notes: data.notes,
-          is_credit: data.is_credit || false,
-          is_paid: !data.is_credit,
-          customer_name: data.customer_name,
-          sold_by: data.sold_by,
-          unit_equivalence_id: data.unit_equivalence_id,
-          credit_group_id: data.credit_group_id,
-          total_amount,
-        } as any)
+        .insert(insertData as any)
         .select()
         .single();
       
@@ -76,10 +88,14 @@ export function useCreateMovement() {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
       
-      const message = variables.movement_type === "entrada" 
-        ? "Entrada registrada exitosamente" 
-        : "Salida registrada exitosamente";
-      toast.success(message);
+      if (!navigator.onLine) {
+        toast.info("Guardado offline — se sincronizará al reconectar");
+      } else {
+        const message = variables.movement_type === "entrada" 
+          ? "Entrada registrada exitosamente" 
+          : "Salida registrada exitosamente";
+        toast.success(message);
+      }
     },
     onError: (error: Error) => {
       console.error(error);
@@ -93,6 +109,15 @@ export function useDeleteMovement() {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      if (!navigator.onLine) {
+        addToOfflineQueue({
+          table: "inventory_movements",
+          operation: "delete",
+          data: { id },
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from("inventory_movements")
         .delete()
@@ -104,7 +129,12 @@ export function useDeleteMovement() {
       queryClient.invalidateQueries({ queryKey: ["movements"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
-      toast.success("Movimiento eliminado exitosamente");
+      
+      if (!navigator.onLine) {
+        toast.info("Eliminación guardada offline — se sincronizará al reconectar");
+      } else {
+        toast.success("Movimiento eliminado exitosamente");
+      }
     },
     onError: () => {
       toast.error("Error al eliminar el movimiento");
