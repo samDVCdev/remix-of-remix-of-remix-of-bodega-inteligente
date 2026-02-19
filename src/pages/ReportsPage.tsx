@@ -9,7 +9,7 @@ import { BarChart3, Download, FileSpreadsheet, AlertTriangle, TrendingUp, Credit
 import { useMovements } from "@/hooks/useMovements";
 import { useProducts } from "@/hooks/useProducts";
 import { useCurrency } from "@/hooks/useCurrency";
-import { exportMovementsToExcel, exportMovementsToPDF } from "@/lib/exportUtils";
+import { exportMovementsToExcel, exportMovementsToPDF, exportFullReportPDF } from "@/lib/exportUtils";
 import { ReportLowStock } from "@/components/reports/ReportLowStock";
 import { ReportTopProducts } from "@/components/reports/ReportTopProducts";
 import { ReportCredits } from "@/components/reports/ReportCredits";
@@ -85,12 +85,18 @@ export default function ReportsPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => filteredMovements.length && exportMovementsToPDF(filteredMovements, startDate, endDate)}
+              onClick={() => filteredMovements.length && exportFullReportPDF({
+                movements: filteredMovements,
+                products: products || [],
+                startDate,
+                endDate,
+                exchangeRate,
+              })}
               disabled={!filteredMovements.length}
               className="gap-1"
             >
               <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">PDF</span>
+              <span className="hidden sm:inline">PDF Completo</span>
             </Button>
           </div>
         </div>
