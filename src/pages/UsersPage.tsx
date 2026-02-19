@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Shield, User, Pencil, Power, PowerOff, Search, UserPlus } from "lucide-react";
+import { Users, Shield, User, Pencil, Power, PowerOff, Search, UserPlus, AtSign } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,8 @@ interface UserWithRole {
   id: string;
   user_id: string;
   full_name: string | null;
+  username: string | null;
+  email: string | null;
   created_at: string;
   is_active: boolean;
   role: "admin" | "empleado";
@@ -34,7 +36,10 @@ export default function UsersPage() {
   
   const [search, setSearch] = useState("");
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
-  const [newName, setNewName] = useState("");
+  const [editName, setEditName] = useState("");
+  const [editUsername, setEditUsername] = useState("");
+  const [editRole, setEditRole] = useState<"admin" | "empleado">("empleado");
+  const [usernameError, setUsernameError] = useState("");
   const [togglingUser, setTogglingUser] = useState<UserWithRole | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
@@ -48,16 +53,36 @@ export default function UsersPage() {
     updateRole.mutate({ userId, role });
   };
 
-  const handleEditName = (user: UserWithRole) => {
-    setEditingUser(user);
-    setNewName(user.full_name || "");
+  const validateUsername = (value: string) => {
+    if (!value) { setUsernameError("El usuario es requerido"); return false; }
+    if (value.length < 3) { setUsernameError("Mínimo 3 caracteres"); return false; }
+    if (value.length > 30) { setUsernameError("Máximo 30 caracteres"); return false; }
+    if (!/^[a-zA-Z0-9_-]+$/.test(value)) { setUsernameError("Solo letras, números, - y _"); return false; }
+    setUsernameError("");
+    return true;
   };
 
-  const handleSaveName = () => {
-    if (editingUser && newName.trim()) {
-      updateName.mutate({ userId: editingUser.user_id, fullName: newName.trim() });
-      setEditingUser(null);
+  const handleEditUser = (user: UserWithRole) => {
+    setEditingUser(user);
+    setEditName(user.full_name || "");
+    setEditUsername(user.username || "");
+    setEditRole(user.role);
+    setUsernameError("");
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingUser || !editName.trim()) return;
+    if (!validateUsername(editUsername)) return;
+
+    // Update name & username
+    updateName.mutate({ userId: editingUser.user_id, fullName: editName.trim(), username: editUsername.toLowerCase().trim() });
+
+    // Update role if changed
+    if (editRole !== editingUser.role) {
+      updateRole.mutate({ userId: editingUser.user_id, role: editRole });
     }
+
+    setEditingUser(null);
   };
 
   const handleToggleStatus = () => {
@@ -207,8 +232,8 @@ export default function UsersPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleEditName(user)}
-                            title="Editar nombre"
+                            onClick={() => handleEditUser(user)}
+                            title="Editar usuario"
                           >
                             <Pencil className="w-4 h-4" />
                           </Button>
@@ -236,28 +261,76 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {/* Edit Name Dialog */}
+      {/* Edit User Dialog */}
       <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
-        <DialogContent className="bg-card mx-4">
+        <DialogContent className="sm:max-w-[450px] lg:max-w-[500px] bg-card mx-4">
           <DialogHeader>
             <DialogTitle>Editar Usuario</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Nombre Completo</Label>
+              <Label>Nombre Completo *</Label>
               <Input
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="Nombre del usuario"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Juan Pérez"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Nombre de Usuario *</Label>
+              <div className="relative">
+                <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={editUsername}
+                  onChange={(e) => { setEditUsername(e.target.value); validateUsername(e.target.value); }}
+                  placeholder="juanperez"
+                  className="pl-10"
+                />
+              </div>
+              {usernameError && <p className="text-xs text-destructive">{usernameError}</p>}
+              <p className="text-xs text-muted-foreground">Solo letras, números, guiones y guiones bajos (3-30 caracteres)</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Correo Electrónico</Label>
+              <Input
+                value={editingUser?.email || ""}
+                disabled
+                className="opacity-60"
+              />
+              <p className="text-xs text-muted-foreground">El correo no se puede modificar</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Rol</Label>
+              <Select value={editRole} onValueChange={(v: "admin" | "empleado") => setEditRole(v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-popover">
+                  <SelectItem value="empleado">
+                    <span className="flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      Empleado
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="admin">
+                    <span className="flex items-center gap-2">
+                      <Shield className="w-4 h-4" />
+                      Administrador
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingUser(null)}>
               Cancelar
             </Button>
-            <Button onClick={handleSaveName}>
-              Guardar
+            <Button onClick={handleSaveEdit} disabled={!editName.trim() || !!usernameError}>
+              Guardar Cambios
             </Button>
           </DialogFooter>
         </DialogContent>

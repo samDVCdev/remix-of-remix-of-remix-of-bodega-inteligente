@@ -6,6 +6,8 @@ interface UserWithRole {
   id: string;
   user_id: string;
   full_name: string | null;
+  username: string | null;
+  email: string | null;
   created_at: string;
   is_active: boolean;
   role: "admin" | "empleado";
@@ -34,6 +36,8 @@ export function useUsers() {
           id: profile.id,
           user_id: profile.user_id,
           full_name: profile.full_name,
+          username: profile.username,
+          email: profile.email,
           created_at: profile.created_at,
           is_active: profile.is_active ?? true,
           role: (userRole?.role as "admin" | "empleado") || "empleado",
@@ -90,20 +94,23 @@ export function useUpdateUserName() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ userId, fullName }: { userId: string; fullName: string }) => {
+    mutationFn: async ({ userId, fullName, username }: { userId: string; fullName: string; username?: string }) => {
+      const updateData: Record<string, string> = { full_name: fullName };
+      if (username !== undefined) updateData.username = username;
+
       const { error } = await supabase
         .from("profiles")
-        .update({ full_name: fullName })
+        .update(updateData)
         .eq("user_id", userId);
       
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
-      toast.success("Nombre actualizado");
+      toast.success("Usuario actualizado");
     },
-    onError: () => {
-      toast.error("Error al actualizar el nombre");
+    onError: (error: any) => {
+      toast.error(error.message || "Error al actualizar el usuario");
     },
   });
 }
