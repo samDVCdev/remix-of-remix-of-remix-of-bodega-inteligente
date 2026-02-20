@@ -154,7 +154,11 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
       // Determine low_stock_unit from threshold
       let lowStockUnit = "base";
       let lowStockQty = product.low_stock_threshold;
-      if (saleEquivalences.length > 0) {
+      
+      // For measure-based products, convert base units back to measure units
+      if (measType !== "unit") {
+        lowStockQty = product.low_stock_threshold / measureConfig.multiplier;
+      } else if (saleEquivalences.length > 0) {
         // Try to find a sale equivalence that divides evenly
         const matchingEquiv = saleEquivalences.find(e => 
           e.base_unit_multiplier > 1 && product.low_stock_threshold % e.base_unit_multiplier === 0

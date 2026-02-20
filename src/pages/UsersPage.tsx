@@ -159,9 +159,8 @@ export default function UsersPage() {
                   <TableRow className="table-header">
                     <TableHead>Usuario</TableHead>
                     <TableHead className="hidden sm:table-cell">Fecha de Registro</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Rol</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+                     <TableHead>Estado</TableHead>
+                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -200,32 +199,6 @@ export default function UsersPage() {
                         )}>
                           {user.is_active ? "Activo" : "Inactivo"}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={user.role}
-                          onValueChange={(value: "admin" | "empleado") => 
-                            handleRoleChange(user.user_id, value)
-                          }
-                        >
-                          <SelectTrigger className="w-[130px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="admin">
-                              <span className="flex items-center gap-2">
-                                <Shield className="w-4 h-4" />
-                                Admin
-                              </span>
-                            </SelectItem>
-                            <SelectItem value="empleado">
-                              <span className="flex items-center gap-2">
-                                <User className="w-4 h-4" />
-                                Empleado
-                              </span>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">

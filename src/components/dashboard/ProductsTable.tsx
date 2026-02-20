@@ -24,6 +24,9 @@ function getMainEquivalence(product: Product) {
 function getEquivalenceDisplay(product: Product) {
   const mainPackage = getMainEquivalence(product);
   if (!mainPackage || mainPackage.base_unit_multiplier <= 1) return null;
+  if (product.base_unit === 'gramo') {
+    return `1 ${mainPackage.unit_name.toUpperCase()} = ${(mainPackage.base_unit_multiplier / 1000).toFixed(1)} KG`;
+  }
   return `1 ${mainPackage.unit_name.toUpperCase()} = ${mainPackage.base_unit_multiplier} ${product.base_unit.toUpperCase()}`;
 }
 
