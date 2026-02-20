@@ -16,9 +16,12 @@ export function ProductGrid({
   onSearchChange, 
   onSelectProduct 
 }: ProductGridProps) {
+  const normalize = (str: string) =>
+    str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
   const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.code.toLowerCase().includes(searchQuery.toLowerCase())
+    normalize(p.name).includes(normalize(searchQuery)) ||
+    normalize(p.code).includes(normalize(searchQuery))
   );
 
   return (

@@ -13,25 +13,29 @@ interface WeightModalProps {
 }
 
 export function WeightModal({ open, onOpenChange, product, onConfirm }: WeightModalProps) {
-  const [kg, setKg] = useState("");
+  const [value, setValue] = useState("");
+  const [unit, setUnit] = useState<"kg" | "g">("kg");
   const { formatPrice } = useCurrency();
 
   if (!product) return null;
 
-  const kgValue = parseFloat(kg) || 0;
+  const numValue = parseFloat(value) || 0;
+  const kgValue = unit === "kg" ? numValue : numValue / 1000;
   const pricePerKilo = product.price_per_kilo || 0;
   const total = pricePerKilo * kgValue;
 
   const handleConfirm = () => {
     if (kgValue > 0) {
       onConfirm(product, kgValue);
-      setKg("");
+      setValue("");
+      setUnit("kg");
       onOpenChange(false);
     }
   };
 
   const handleClose = () => {
-    setKg("");
+    setValue("");
+    setUnit("kg");
     onOpenChange(false);
   };
 
@@ -45,21 +49,46 @@ export function WeightModal({ open, onOpenChange, product, onConfirm }: WeightMo
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* KG input */}
+          {/* Unit toggle */}
+          <div className="flex rounded-lg border border-border overflow-hidden">
+            <button
+              type="button"
+              onClick={() => { setUnit("kg"); setValue(""); }}
+              className={`flex-1 py-2 text-sm font-semibold transition-colors ${unit === "kg" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+            >
+              Kilogramos (KG)
+            </button>
+            <button
+              type="button"
+              onClick={() => { setUnit("g"); setValue(""); }}
+              className={`flex-1 py-2 text-sm font-semibold transition-colors ${unit === "g" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+            >
+              Gramos (g)
+            </button>
+          </div>
+
+          {/* Value input */}
           <div className="relative">
             <Input
               type="number"
               placeholder="0"
-              value={kg}
-              onChange={(e) => setKg(e.target.value)}
-              step="0.1"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              step={unit === "kg" ? "0.1" : "1"}
               className="text-center text-4xl h-20 font-display pr-14"
               autoFocus
             />
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground text-xl font-semibold">
-              KG
+              {unit === "kg" ? "KG" : "g"}
             </span>
           </div>
+
+          {/* Conversion hint */}
+          {unit === "g" && numValue > 0 && (
+            <p className="text-center text-xs text-muted-foreground">
+              = {kgValue.toFixed(3)} KG
+            </p>
+          )}
 
           {/* Price display */}
           <div className="bg-primary/10 rounded-xl p-4 flex items-center justify-between">
