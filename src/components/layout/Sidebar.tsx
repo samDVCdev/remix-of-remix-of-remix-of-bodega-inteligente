@@ -10,7 +10,8 @@ import {
   FileText,
   LogOut,
   ChevronDown,
-  DollarSign
+  DollarSign,
+  ShieldAlert
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ const settingsSubNav = [
   { name: "Moneda", href: "/moneda", icon: DollarSign },
   { name: "Usuarios", href: "/usuarios", icon: Users },
   { name: "Auditoría", href: "/auditoria", icon: FileText },
+  { name: "Zona Peligrosa", href: "/zona-peligrosa", icon: ShieldAlert },
 ];
 
 const employeeNavigation = [

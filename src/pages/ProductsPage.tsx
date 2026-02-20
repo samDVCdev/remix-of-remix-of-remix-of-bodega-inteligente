@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Search, Package, Download, FileSpreadsheet, Eye, Scale, Layers, PackagePlus, Upload, Filter, AlertTriangle } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Package, Download, FileSpreadsheet, Eye, Scale, Layers, PackagePlus, Upload } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,9 +18,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { Product } from "@/types/inventory";
 import { cn } from "@/lib/utils";
 import { exportProductsToExcel, exportProductsToPDF } from "@/lib/exportUtils";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+
+
 
 type StockFilter = "all" | "low" | "ok";
 type SaleTypeFilter = "all" | "unit" | "weight" | "variants";
@@ -36,13 +35,8 @@ export default function ProductsPage() {
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
 
-  // Multi-step delete all state
-  const [deleteAllStep, setDeleteAllStep] = useState(0); // 0=closed, 1=first confirm, 2=type confirm, 3=final
-  const [deleteAllInput, setDeleteAllInput] = useState("");
-  const [isDeletingAll, setIsDeletingAll] = useState(false);
 
   const { isAdmin } = useAuth();
-  const queryClient = useQueryClient();
 
   const { data: products, isLoading } = useProductsWithVariants();
   const deleteProduct = useDeleteProduct();
@@ -88,22 +82,8 @@ export default function ProductsPage() {
     setEditingProduct(null);
   };
 
-  const handleDeleteAll = async () => {
-    setIsDeletingAll(true);
-    try {
-      const { error } = await supabase.from("products").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["products-with-variants"] });
-      toast.success("Todos los productos han sido eliminados");
-    } catch (err) {
-      toast.error("Error al eliminar los productos");
-    } finally {
-      setIsDeletingAll(false);
-      setDeleteAllStep(0);
-      setDeleteAllInput("");
-    }
-  };
+
+
 
   const getSaleTypeDisplay = (product: Product) => {
     switch (product.sale_type) {
@@ -282,12 +262,8 @@ export default function ProductsPage() {
                   Limpiar filtros ({activeFiltersCount})
                 </Button>
               )}
-              {isAdmin && products && products.length > 0 && (
-                <Button variant="destructive" size="sm" onClick={() => setDeleteAllStep(1)} className="gap-1 h-9 ml-auto">
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Eliminar todos</span>
-                </Button>
-              )}
+
+
             </div>
           </div>
         </div>
@@ -397,86 +373,6 @@ export default function ProductsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete ALL — Step 1: First warning */}
-      <AlertDialog open={deleteAllStep === 1} onOpenChange={() => { setDeleteAllStep(0); setDeleteAllInput(""); }}>
-        <AlertDialogContent className="bg-card mx-4">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="w-5 h-5" />
-              ¿Eliminar TODOS los productos?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Estás a punto de eliminar <strong>{products?.length || 0} productos</strong> del sistema. 
-              Esta acción es <strong>irreversible</strong> y eliminará también sus variantes y equivalencias.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => setDeleteAllStep(2)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Entiendo, continuar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete ALL — Step 2: Type confirmation */}
-      <AlertDialog open={deleteAllStep === 2} onOpenChange={() => { setDeleteAllStep(0); setDeleteAllInput(""); }}>
-        <AlertDialogContent className="bg-card mx-4">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="w-5 h-5" />
-              Confirmación de seguridad
-            </AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-3">
-                <p>Para confirmar, escribe <strong className="text-foreground">ELIMINAR TODO</strong> en el campo de abajo:</p>
-                <Input
-                  value={deleteAllInput}
-                  onChange={(e) => setDeleteAllInput(e.target.value)}
-                  placeholder="Escribe ELIMINAR TODO"
-                  className="font-mono"
-                />
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => setDeleteAllStep(3)}
-              disabled={deleteAllInput !== "ELIMINAR TODO"}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
-            >
-              Confirmar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete ALL — Step 3: Final confirmation */}
-      <AlertDialog open={deleteAllStep === 3} onOpenChange={() => { setDeleteAllStep(0); setDeleteAllInput(""); }}>
-        <AlertDialogContent className="bg-card mx-4">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="w-5 h-5" />
-              Última confirmación
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Se eliminarán <strong>{products?.length || 0} productos</strong> permanentemente. 
-              ¿Estás completamente seguro? No hay vuelta atrás.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>No, cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteAll}
-              disabled={isDeletingAll}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeletingAll ? "Eliminando..." : "Sí, eliminar todo"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </MainLayout>
   );
 }

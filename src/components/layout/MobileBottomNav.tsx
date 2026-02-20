@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Package, ShoppingCart, CreditCard, MoreHorizontal, LayoutDashboard, List, BarChart3, Users, Shield, ChevronUp, LogOut, DollarSign } from "lucide-react";
+import { Package, ShoppingCart, CreditCard, MoreHorizontal, LayoutDashboard, List, BarChart3, Users, Shield, ChevronUp, LogOut, DollarSign, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { LucideIcon } from "lucide-react";
@@ -64,6 +64,7 @@ export function MobileBottomNav() {
     { name: "Moneda", href: "/moneda", icon: DollarSign },
     { name: "Usuarios", href: "/usuarios", icon: Users },
     { name: "Auditoría", href: "/auditoria", icon: Shield },
+    { name: "Zona Peligrosa", href: "/zona-peligrosa", icon: ShieldAlert },
   ];
 
   const allModules = isAdmin ? adminModules : employeeModules;
