@@ -73,7 +73,16 @@ export function ProductCard({ product, onSelect }: ProductCardProps) {
 
       {/* Stock */}
       <p className="text-[10px] text-muted-foreground mb-1 text-left w-full">
-        Stock: {Number(product.stock).toFixed(0)}
+        Stock: {product.base_unit === 'gramo' 
+          ? (() => {
+              const kilos = Math.floor(product.stock_base_units / 1000);
+              const gramos = Math.round(product.stock_base_units % 1000);
+              if (kilos > 0 && gramos > 0) return `${kilos}kg ${gramos}g`;
+              if (kilos > 0) return `${kilos}kg`;
+              return `${gramos}g`;
+            })()
+          : Number(product.stock).toFixed(0)
+        }
       </p>
 
       {/* Price + Add button */}
