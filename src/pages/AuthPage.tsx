@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,8 +25,15 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function AuthPage() {
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const { signIn, user, isAdmin, isLoading: authLoading, role } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect authenticated users based on role
+  useEffect(() => {
+    if (user && role) {
+      navigate(isAdmin ? "/" : "/pos", { replace: true });
+    }
+  }, [user, role, isAdmin, navigate]);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -60,7 +67,7 @@ export default function AuthPage() {
 
       await signIn(emailToUse, data.password);
       toast.success("¡Bienvenido!");
-      navigate("/");
+      // Redirect will be handled by useEffect below
     } catch (error: any) {
       const msg = error.message || "";
       if (msg === "USER_DEACTIVATED") {
