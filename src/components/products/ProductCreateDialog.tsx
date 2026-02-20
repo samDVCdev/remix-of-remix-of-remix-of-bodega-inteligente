@@ -665,7 +665,7 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
                         </FormControl>
                         <SelectContent className="bg-popover">
                           {isMeasureBasedSale ? (
-                            <SelectItem value="base">{config.measureLabel} ({config.measureLabel})</SelectItem>
+                            <SelectItem value="base">{config.contentLabel} ({config.measureLabel})</SelectItem>
                           ) : (
                             <>
                               <SelectItem value="base">Unidades base</SelectItem>
@@ -689,7 +689,7 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
               </div>
               {isMeasureBasedSale && (
                 <p className="text-xs text-muted-foreground">
-                  = {(form.watch("low_stock_quantity") || 0) * config.multiplier} {config.baseUnit}s (unidades base)
+                  = {(form.watch("low_stock_quantity") || 0)} {config.contentLabel}
                 </p>
               )}
               {!isMeasureBasedSale && form.watch("low_stock_unit") && form.watch("low_stock_unit") !== "base" && (() => {
