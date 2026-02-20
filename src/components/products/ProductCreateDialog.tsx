@@ -400,16 +400,23 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-xs uppercase text-primary font-semibold tracking-wider">
-                          Stock Actual ({config.baseUnit}s)
+                          Stock Actual ({isMeasureBasedSale ? config.measureLabel : config.baseUnit + "s"})
                         </FormLabel>
                         <FormControl>
                           <Input 
                             type="number" 
-                            step="1" 
+                            step={isMeasureBasedSale ? "0.1" : "1"}
                             min="0" 
                             placeholder="0" 
                             className="h-12 text-lg"
-                            {...field}
+                            value={isMeasureBasedSale && field.value !== undefined
+                              ? (field.value / config.multiplier)
+                              : field.value
+                            }
+                            onChange={(e) => {
+                              const val = Number(e.target.value);
+                              field.onChange(isMeasureBasedSale ? val * config.multiplier : val);
+                            }}
                           />
                         </FormControl>
                         <FormMessage />
@@ -658,7 +665,7 @@ export function ProductCreateDialog({ open, onOpenChange, product }: ProductCrea
                         </FormControl>
                         <SelectContent className="bg-popover">
                           {isMeasureBasedSale ? (
-                            <SelectItem value="base">{config.measureLabel} ({config.contentLabel})</SelectItem>
+                            <SelectItem value="base">{config.measureLabel} ({config.measureLabel})</SelectItem>
                           ) : (
                             <>
                               <SelectItem value="base">Unidades base</SelectItem>

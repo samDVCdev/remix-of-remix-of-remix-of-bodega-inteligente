@@ -68,7 +68,7 @@ export function CartPanel({
                       <h4 className="font-semibold truncate">{item.display_name}</h4>
                       <p className="text-sm text-muted-foreground">
                         {item.grams 
-                          ? `${item.grams}gr @ $${(item.unit_price * 1000).toFixed(2)}/kg`
+                          ? `${item.quantity} KG @ $${item.unit_price.toFixed(2)}/KG`
                           : `${item.quantity} × $${item.unit_price.toFixed(2)}`
                         }
                       </p>

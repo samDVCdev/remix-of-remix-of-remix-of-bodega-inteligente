@@ -9,29 +9,29 @@ interface WeightModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   product: Product | null;
-  onConfirm: (product: Product, grams: number) => void;
+  onConfirm: (product: Product, kg: number) => void;
 }
 
 export function WeightModal({ open, onOpenChange, product, onConfirm }: WeightModalProps) {
-  const [grams, setGrams] = useState("");
+  const [kg, setKg] = useState("");
   const { formatPrice } = useCurrency();
 
   if (!product) return null;
 
-  const gramsValue = parseFloat(grams) || 0;
-  const pricePerGram = (product.price_per_kilo || 0) / 1000;
-  const total = pricePerGram * gramsValue;
+  const kgValue = parseFloat(kg) || 0;
+  const pricePerKilo = product.price_per_kilo || 0;
+  const total = pricePerKilo * kgValue;
 
   const handleConfirm = () => {
-    if (gramsValue > 0) {
-      onConfirm(product, gramsValue);
-      setGrams("");
+    if (kgValue > 0) {
+      onConfirm(product, kgValue);
+      setKg("");
       onOpenChange(false);
     }
   };
 
   const handleClose = () => {
-    setGrams("");
+    setKg("");
     onOpenChange(false);
   };
 
@@ -45,18 +45,19 @@ export function WeightModal({ open, onOpenChange, product, onConfirm }: WeightMo
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Grams input */}
+          {/* KG input */}
           <div className="relative">
             <Input
               type="number"
               placeholder="0"
-              value={grams}
-              onChange={(e) => setGrams(e.target.value)}
-              className="text-center text-4xl h-20 font-display pr-12"
+              value={kg}
+              onChange={(e) => setKg(e.target.value)}
+              step="0.1"
+              className="text-center text-4xl h-20 font-display pr-14"
               autoFocus
             />
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground text-xl">
-              gr
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground text-xl font-semibold">
+              KG
             </span>
           </div>
 
@@ -70,7 +71,7 @@ export function WeightModal({ open, onOpenChange, product, onConfirm }: WeightMo
 
           {/* Price per kilo info */}
           <p className="text-center text-sm text-muted-foreground">
-            Precio: {formatPrice(product.price_per_kilo || 0)} / kg
+            Precio: {formatPrice(pricePerKilo)} / KG
           </p>
 
           {/* Actions */}
@@ -84,7 +85,7 @@ export function WeightModal({ open, onOpenChange, product, onConfirm }: WeightMo
             </Button>
             <Button
               onClick={handleConfirm}
-              disabled={gramsValue <= 0}
+              disabled={kgValue <= 0}
               className="flex-1 touch-button bg-primary"
             >
               Agregar

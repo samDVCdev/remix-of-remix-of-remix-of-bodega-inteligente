@@ -48,21 +48,22 @@ export function useCart() {
     toast.success(`${label} agregado`);
   }, []);
 
-  const addWeightProduct = useCallback((product: Product, grams: number) => {
-    const pricePerGram = (product.price_per_kilo || 0) / 1000;
-    const total = pricePerGram * grams;
+  const addWeightProduct = useCallback((product: Product, kg: number) => {
+    const pricePerKilo = product.price_per_kilo || 0;
+    const total = pricePerKilo * kg;
+    const gramsForStock = kg * 1000; // Convert KG to grams for stock deduction
 
     setItems(prev => [...prev, {
       id: `${product.id}-${Date.now()}`,
       product,
-      quantity: grams,
-      unit_price: pricePerGram,
+      quantity: kg,
+      unit_price: pricePerKilo,
       total,
-      grams,
-      display_name: `${product.name} (${grams}gr)`,
-      base_units_per_item: 1 // 1 gram = 1 base unit
+      grams: gramsForStock, // Internal: grams for stock deduction
+      display_name: `${product.name} (${kg} KG)`,
+      base_units_per_item: 1000 // 1 KG = 1000 grams (base units)
     }]);
-    toast.success(`${product.name} (${grams}gr) agregado`);
+    toast.success(`${product.name} (${kg} KG) agregado`);
   }, []);
 
   const addVariantProduct = useCallback((product: Product, variant: ProductVariant, quantity: number) => {

@@ -27,7 +27,7 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
   const getSaleTypeInfo = () => {
     switch (product.sale_type) {
       case 'weight':
-        return { icon: Scale, label: 'Por Peso (Gramera)', color: 'text-accent' };
+        return { icon: Scale, label: 'Por Peso (Kilogramos)', color: 'text-accent' };
       case 'variants':
         return { icon: Layers, label: 'Múltiples Presentaciones', color: 'text-primary' };
       default:
@@ -41,14 +41,7 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
   // Función para mostrar stock legible
   const getReadableStock = () => {
     if (product.base_unit === 'gramo') {
-      const kilos = Math.floor(product.stock_base_units / 1000);
-      const gramos = product.stock_base_units % 1000;
-      if (kilos > 0 && gramos > 0) {
-        return `${kilos} kg y ${gramos} g`;
-      } else if (kilos > 0) {
-        return `${kilos} kg`;
-      }
-      return `${gramos} g`;
+      return `${(product.stock_base_units / 1000).toFixed(1)} KG`;
     }
     return `${product.stock_base_units} ${product.base_unit}s`;
   };
@@ -86,9 +79,6 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
             <div className="p-4 rounded-lg bg-muted/30 border border-border">
               <p className="text-xs text-muted-foreground mb-1">Stock Actual</p>
               <p className="text-xl font-bold">{getReadableStock()}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                ({product.stock_base_units} {product.base_unit}s base)
-              </p>
             </div>
             <div className="p-4 rounded-lg bg-muted/30 border border-border">
               <p className="text-xs text-muted-foreground mb-1">Estado</p>
@@ -101,7 +91,10 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
                 {isLowStock ? "Stock Bajo" : "Stock Normal"}
               </Badge>
               <p className="text-xs text-muted-foreground mt-2">
-                Mínimo: {product.low_stock_threshold} {product.base_unit}s
+                Mínimo: {product.base_unit === 'gramo' 
+                  ? `${(product.low_stock_threshold / 1000).toFixed(1)} KG`
+                  : `${product.low_stock_threshold} ${product.base_unit}s`
+                }
               </p>
             </div>
           </div>

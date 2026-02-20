@@ -80,8 +80,8 @@ export default function POSPage() {
     }
   };
 
-  const handleWeightConfirm = (product: Product, grams: number) => {
-    addWeightProduct(product, grams);
+  const handleWeightConfirm = (product: Product, kg: number) => {
+    addWeightProduct(product, kg);
   };
 
   const handleVariantConfirm = (product: Product, variant: ProductVariant, quantity: number) => {
