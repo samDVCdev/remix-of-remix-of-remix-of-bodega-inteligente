@@ -31,11 +31,7 @@ function getReadableStock(product: Product) {
   const mainPackage = getMainEquivalence(product);
 
   if (product.base_unit === 'gramo') {
-    const kilos = Math.floor(product.stock_base_units / 1000);
-    const gramos = Math.round(product.stock_base_units % 1000);
-    if (kilos > 0 && gramos > 0) return `${kilos}kg ${gramos}g`;
-    if (kilos > 0) return `${kilos}kg`;
-    return `${gramos}g`;
+    return `${(product.stock_base_units / 1000).toFixed(1)} KG`;
   }
 
   if (mainPackage && mainPackage.base_unit_multiplier > 1) {

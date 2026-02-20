@@ -214,7 +214,7 @@ export function InventoryEntryDialog({ open, onOpenChange }: InventoryEntryDialo
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["products-with-variants"] });
       
-      toast.success(`Stock actualizado: +${unitsToAdd} ${selectedProduct.base_unit}s`);
+      toast.success(`Stock actualizado: +${isMeasureBasedProduct ? (unitsToAdd / measurementInfo.multiplier).toFixed(1) + ' ' + measurementInfo.measureAbbr.toUpperCase() : unitsToAdd + ' ' + selectedProduct.base_unit + 's'}`);
       onOpenChange(false);
     } catch (error) {
       console.error("Error updating stock:", error);

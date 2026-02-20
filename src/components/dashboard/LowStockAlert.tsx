@@ -44,10 +44,16 @@ export function LowStockAlert({ products }: LowStockAlertProps) {
             </div>
             <div className="text-right">
               <p className="font-semibold text-warning">
-                {product.stock} {product.unit}
+                {product.base_unit === 'gramo' 
+                  ? `${(product.stock_base_units / 1000).toFixed(1)} KG`
+                  : `${product.stock} ${product.unit}`
+                }
               </p>
               <p className="text-xs text-muted-foreground">
-                Mín: {product.low_stock_threshold}
+                Mín: {product.base_unit === 'gramo'
+                  ? `${(product.low_stock_threshold / 1000).toFixed(1)} KG`
+                  : product.low_stock_threshold
+                }
               </p>
             </div>
           </div>
