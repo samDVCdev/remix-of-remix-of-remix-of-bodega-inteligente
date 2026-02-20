@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Search, Package, Download, FileSpreadsheet, Eye, Scale, Layers, PackagePlus, Upload } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Package, Download, FileSpreadsheet, Eye, Scale, Layers, PackagePlus, Upload, Filter, AlertTriangle } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProductCreateDialog } from "@/components/products/ProductCreateDialog";
 import { InventoryEntryDialog } from "@/components/products/InventoryEntryDialog";
 import { BulkUploadDialog } from "@/components/products/BulkUploadDialog";
@@ -17,9 +18,17 @@ import { useAuth } from "@/hooks/useAuth";
 import { Product } from "@/types/inventory";
 import { cn } from "@/lib/utils";
 import { exportProductsToExcel, exportProductsToPDF } from "@/lib/exportUtils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+
+type StockFilter = "all" | "low" | "ok";
+type SaleTypeFilter = "all" | "unit" | "weight" | "variants";
 
 export default function ProductsPage() {
   const [search, setSearch] = useState("");
+  const [stockFilter, setStockFilter] = useState<StockFilter>("all");
+  const [saleTypeFilter, setSaleTypeFilter] = useState<SaleTypeFilter>("all");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
   const [isBulkOpen, setIsBulkOpen] = useState(false);
@@ -27,17 +36,30 @@ export default function ProductsPage() {
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
 
+  // Multi-step delete all state
+  const [deleteAllStep, setDeleteAllStep] = useState(0); // 0=closed, 1=first confirm, 2=type confirm, 3=final
+  const [deleteAllInput, setDeleteAllInput] = useState("");
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
+
   const { isAdmin } = useAuth();
+  const queryClient = useQueryClient();
 
   const { data: products, isLoading } = useProductsWithVariants();
   const deleteProduct = useDeleteProduct();
   const { formatPrice, exchangeRate } = useCurrency();
 
-  const filteredProducts = products?.filter(
-    (p) =>
+  const filteredProducts = products?.filter((p) => {
+    const matchesSearch =
       p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.code.toLowerCase().includes(search.toLowerCase())
-  );
+      p.code.toLowerCase().includes(search.toLowerCase());
+    const matchesStock =
+      stockFilter === "all" ||
+      (stockFilter === "low" && p.stock_base_units <= p.low_stock_threshold) ||
+      (stockFilter === "ok" && p.stock_base_units > p.low_stock_threshold);
+    const matchesSaleType =
+      saleTypeFilter === "all" || p.sale_type === saleTypeFilter;
+    return matchesSearch && matchesStock && matchesSaleType;
+  });
 
   const {
     paginatedData,
@@ -64,6 +86,23 @@ export default function ProductsPage() {
   const handleFormClose = () => {
     setIsFormOpen(false);
     setEditingProduct(null);
+  };
+
+  const handleDeleteAll = async () => {
+    setIsDeletingAll(true);
+    try {
+      const { error } = await supabase.from("products").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["products-with-variants"] });
+      toast.success("Todos los productos han sido eliminados");
+    } catch (err) {
+      toast.error("Error al eliminar los productos");
+    } finally {
+      setIsDeletingAll(false);
+      setDeleteAllStep(0);
+      setDeleteAllInput("");
+    }
   };
 
   const getSaleTypeDisplay = (product: Product) => {
@@ -123,13 +162,10 @@ export default function ProductsPage() {
     }
   };
 
-  // Get main package equivalence for display (purchase package - the one with display_order 999)
   const getMainEquivalence = (product: Product) => {
     if (!product.equivalences?.length) return null;
-    // Purchase package has display_order 999
     const purchasePackage = product.equivalences.find(e => e.display_order === 999);
     if (purchasePackage) return purchasePackage;
-    // Fallback to largest multiplier
     return product.equivalences.reduce((max, e) => 
       e.base_unit_multiplier > (max?.base_unit_multiplier || 0) ? e : max,
       product.equivalences[0]
@@ -142,19 +178,13 @@ export default function ProductsPage() {
     if (product.base_unit === 'gramo') {
       const kilos = Math.floor(product.stock_base_units / 1000);
       const gramos = Math.round(product.stock_base_units % 1000);
-      if (kilos > 0 && gramos > 0) {
-        return `${kilos}kg ${gramos}g`;
-      } else if (kilos > 0) {
-        return `${kilos}kg`;
-      }
+      if (kilos > 0 && gramos > 0) return `${kilos}kg ${gramos}g`;
+      if (kilos > 0) return `${kilos}kg`;
       return `${gramos}g`;
     }
     
-    // If we have a main package, show in that format
     if (mainPackage && mainPackage.base_unit_multiplier > 1) {
       const packages = Math.floor(product.stock_base_units / mainPackage.base_unit_multiplier);
-      const remainder = Math.round(product.stock_base_units % mainPackage.base_unit_multiplier);
-      
       return (
         <div>
           <span className="font-semibold text-primary">{product.stock_base_units} {product.base_unit}s</span>
@@ -173,6 +203,8 @@ export default function ProductsPage() {
     if (!mainPackage || mainPackage.base_unit_multiplier <= 1) return null;
     return `1 ${mainPackage.unit_name.toUpperCase()} = ${mainPackage.base_unit_multiplier} ${product.base_unit.toUpperCase()}`;
   };
+
+  const activeFiltersCount = (stockFilter !== "all" ? 1 : 0) + (saleTypeFilter !== "all" ? 1 : 0);
 
   return (
     <MainLayout>
@@ -217,10 +249,46 @@ export default function ProductsPage() {
             )}
           </div>
 
-          {/* Search */}
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+          {/* Search & Filters */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+            </div>
+            <div className="flex gap-2 flex-wrap items-center">
+              <Select value={saleTypeFilter} onValueChange={(v) => setSaleTypeFilter(v as SaleTypeFilter)}>
+                <SelectTrigger className="w-[140px] h-9">
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los tipos</SelectItem>
+                  <SelectItem value="unit">Unidad</SelectItem>
+                  <SelectItem value="weight">Peso</SelectItem>
+                  <SelectItem value="variants">Multi</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={stockFilter} onValueChange={(v) => setStockFilter(v as StockFilter)}>
+                <SelectTrigger className="w-[140px] h-9">
+                  <SelectValue placeholder="Stock" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todo el stock</SelectItem>
+                  <SelectItem value="low">Stock bajo</SelectItem>
+                  <SelectItem value="ok">Stock OK</SelectItem>
+                </SelectContent>
+              </Select>
+              {activeFiltersCount > 0 && (
+                <Button variant="ghost" size="sm" onClick={() => { setStockFilter("all"); setSaleTypeFilter("all"); }} className="text-xs text-muted-foreground h-9">
+                  Limpiar filtros ({activeFiltersCount})
+                </Button>
+              )}
+              {isAdmin && products && products.length > 0 && (
+                <Button variant="destructive" size="sm" onClick={() => setDeleteAllStep(1)} className="gap-1 h-9 ml-auto">
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Eliminar todos</span>
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -231,8 +299,8 @@ export default function ProductsPage() {
           ) : filteredProducts?.length === 0 ? (
             <div className="p-12 text-center">
               <Package className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-              <p className="text-muted-foreground">{search ? "No se encontraron productos" : "No hay productos"}</p>
-              {!search && isAdmin && (
+              <p className="text-muted-foreground">{search || activeFiltersCount > 0 ? "No se encontraron productos con esos filtros" : "No hay productos"}</p>
+              {!search && activeFiltersCount === 0 && isAdmin && (
                 <Button onClick={() => setIsFormOpen(true)} className="mt-4 gap-2">
                   <Plus className="w-4 h-4" />Agregar Producto
                 </Button>
@@ -315,6 +383,7 @@ export default function ProductsPage() {
       {isAdmin && <BulkUploadDialog open={isBulkOpen} onOpenChange={setIsBulkOpen} />}
       <ProductDetailDialog open={!!viewingProduct} onOpenChange={() => setViewingProduct(null)} product={viewingProduct} />
 
+      {/* Single product delete */}
       <AlertDialog open={!!deletingProduct} onOpenChange={() => setDeletingProduct(null)}>
         <AlertDialogContent className="bg-card mx-4">
           <AlertDialogHeader>
@@ -324,6 +393,87 @@ export default function ProductsPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Eliminar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete ALL — Step 1: First warning */}
+      <AlertDialog open={deleteAllStep === 1} onOpenChange={() => { setDeleteAllStep(0); setDeleteAllInput(""); }}>
+        <AlertDialogContent className="bg-card mx-4">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              ¿Eliminar TODOS los productos?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Estás a punto de eliminar <strong>{products?.length || 0} productos</strong> del sistema. 
+              Esta acción es <strong>irreversible</strong> y eliminará también sus variantes y equivalencias.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => setDeleteAllStep(2)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Entiendo, continuar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete ALL — Step 2: Type confirmation */}
+      <AlertDialog open={deleteAllStep === 2} onOpenChange={() => { setDeleteAllStep(0); setDeleteAllInput(""); }}>
+        <AlertDialogContent className="bg-card mx-4">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              Confirmación de seguridad
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>Para confirmar, escribe <strong className="text-foreground">ELIMINAR TODO</strong> en el campo de abajo:</p>
+                <Input
+                  value={deleteAllInput}
+                  onChange={(e) => setDeleteAllInput(e.target.value)}
+                  placeholder="Escribe ELIMINAR TODO"
+                  className="font-mono"
+                />
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => setDeleteAllStep(3)}
+              disabled={deleteAllInput !== "ELIMINAR TODO"}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+            >
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete ALL — Step 3: Final confirmation */}
+      <AlertDialog open={deleteAllStep === 3} onOpenChange={() => { setDeleteAllStep(0); setDeleteAllInput(""); }}>
+        <AlertDialogContent className="bg-card mx-4">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              Última confirmación
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminarán <strong>{products?.length || 0} productos</strong> permanentemente. 
+              ¿Estás completamente seguro? No hay vuelta atrás.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No, cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAll}
+              disabled={isDeletingAll}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeletingAll ? "Eliminando..." : "Sí, eliminar todo"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
