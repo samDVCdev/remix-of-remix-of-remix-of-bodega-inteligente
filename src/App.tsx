@@ -20,6 +20,7 @@ import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 import InventoryMovementsPage from "./pages/InventoryMovementsPage";
 import CurrencySettingsPage from "./pages/CurrencySettingsPage";
+import DangerZonePage from "./pages/DangerZonePage";
 import { SplashScreen } from "@/components/layout/SplashScreen";
 
 const queryClient = new QueryClient({
@@ -93,6 +94,7 @@ const App = () => {
               <Route path="/movimientos-inventario" element={<ProtectedRoute><InventoryMovementsPage /></ProtectedRoute>} />
               <Route path="/auditoria" element={<ProtectedRoute requireAdmin><AuditPage /></ProtectedRoute>} />
               <Route path="/moneda" element={<ProtectedRoute requireAdmin><CurrencySettingsPage /></ProtectedRoute>} />
+              <Route path="/zona-peligrosa" element={<ProtectedRoute requireAdmin><DangerZonePage /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
