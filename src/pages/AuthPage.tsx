@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { AtSign, Lock } from "lucide-react";
+import { AtSign, Lock, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import logoKiosko from "@/assets/logo-kiosko.png";
+import { supabase } from "@/integrations/supabase/client";
 
 const loginSchema = z.object({
   identifier: z
@@ -21,12 +22,35 @@ const loginSchema = z.object({
   password: z.string().min(6, "Mínimo 6 caracteres"),
 });
 
+const registerSchema = z.object({
+  fullName: z.string().trim().min(2, "Mínimo 2 caracteres"),
+  email: z.string().email("Correo inválido"),
+  password: z.string().min(6, "Mínimo 6 caracteres"),
+});
+
 type LoginFormData = z.infer<typeof loginSchema>;
+type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
   const navigate = useNavigate();
-  const { signIn, user, isAdmin, isLoading: authLoading, role } = useAuth();
+  const { signIn, signUp, user, isAdmin, isLoading: authLoading, role } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [noUsers, setNoUsers] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
+
+  // Check if there are any users in the system
+  useEffect(() => {
+    const checkUsers = async () => {
+      const { count } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true });
+      if (count === 0) {
+        setNoUsers(true);
+        setShowRegister(true);
+      }
+    };
+    checkUsers();
+  }, []);
 
   // Redirect authenticated users based on role
   useEffect(() => {
@@ -38,6 +62,11 @@ export default function AuthPage() {
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: { identifier: "", password: "" },
+  });
+
+  const registerForm = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { fullName: "", email: "", password: "" },
   });
 
   const handleLogin = async (data: LoginFormData) => {
@@ -67,7 +96,6 @@ export default function AuthPage() {
 
       await signIn(emailToUse, data.password);
       toast.success("¡Bienvenido!");
-      // Redirect will be handled by useEffect below
     } catch (error: any) {
       const msg = error.message || "";
       if (msg === "USER_DEACTIVATED") {
@@ -81,6 +109,109 @@ export default function AuthPage() {
       setIsLoading(false);
     }
   };
+
+  const handleRegister = async (data: RegisterFormData) => {
+    setIsLoading(true);
+    try {
+      await signUp(data.email, data.password, data.fullName);
+      toast.success("¡Cuenta creada! Iniciando sesión...");
+      // Auto sign in after registration
+      await signIn(data.email, data.password);
+    } catch (error: any) {
+      toast.error(error.message || "Error al crear cuenta");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (showRegister) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <img
+              src={logoKiosko}
+              alt="Kiosko"
+              className="w-32 h-32 mx-auto rounded-2xl object-cover mb-4"
+            />
+            <CardTitle className="font-display text-2xl">Configuración Inicial</CardTitle>
+            <CardDescription>
+              {noUsers
+                ? "No hay usuarios registrados. Crea la cuenta de administrador."
+                : "Crear nueva cuenta"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...registerForm}>
+              <form onSubmit={registerForm.handleSubmit(handleRegister)} className="space-y-4">
+                <FormField
+                  control={registerForm.control}
+                  name="fullName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nombre Completo</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input placeholder="Juan Pérez" className="pl-10" {...field} />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={registerForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Correo Electrónico</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input type="email" placeholder="correo@ejemplo.com" className="pl-10" {...field} />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={registerForm.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contraseña</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input type="password" placeholder="Mínimo 6 caracteres" className="pl-10" {...field} />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "Creando cuenta..." : "Crear Cuenta de Administrador"}
+                </Button>
+                {!noUsers && (
+                  <Button type="button" variant="ghost" className="w-full" onClick={() => setShowRegister(false)}>
+                    Ya tengo cuenta
+                  </Button>
+                )}
+              </form>
+            </Form>
+            {noUsers && (
+              <p className="text-xs text-center text-muted-foreground mt-4">
+                Este será el primer administrador del sistema
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
