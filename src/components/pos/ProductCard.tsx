@@ -1,14 +1,22 @@
-import { Package, Scale, Layers, Plus } from "lucide-react";
-import { Product } from "@/types/inventory";
+import { Package, Scale, Layers, Plus, Minus } from "lucide-react";
+import { Product, CartItem } from "@/types/inventory";
 import { useCurrency } from "@/hooks/useCurrency";
 
 interface ProductCardProps {
   product: Product;
   onSelect: (product: Product) => void;
+  cartItems?: CartItem[];
+  onIncrement?: (product: Product) => void;
+  onDecrement?: (productId: string) => void;
 }
 
-export function ProductCard({ product, onSelect }: ProductCardProps) {
+export function ProductCard({ product, onSelect, cartItems = [], onIncrement, onDecrement }: ProductCardProps) {
   const { formatDualPrice } = useCurrency();
+
+  // Calculate total quantity in cart for this product
+  const cartQuantity = cartItems
+    .filter(item => item.product.id === product.id)
+    .reduce((sum, item) => sum + item.quantity, 0);
 
   const getPriceInfo = () => {
     switch (product.sale_type) {
@@ -25,6 +33,20 @@ export function ProductCard({ product, onSelect }: ProductCardProps) {
   const dual = formatDualPrice(amount);
   const isLowStock = product.stock <= product.low_stock_threshold;
   const outOfStock = product.stock <= 0;
+
+  const handleDecrement = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onDecrement && cartQuantity > 0) {
+      // Find the last cart item for this product
+      const lastItem = [...cartItems].reverse().find(item => item.product.id === product.id);
+      if (lastItem) onDecrement(lastItem.id);
+    }
+  };
+
+  const handleIncrement = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onIncrement) onIncrement(product);
+  };
 
   return (
     <button
@@ -79,7 +101,7 @@ export function ProductCard({ product, onSelect }: ProductCardProps) {
         }
       </p>
 
-      {/* Price + Add button */}
+      {/* Price + Counter/Add */}
       <div className="flex items-end justify-between w-full mt-auto">
         <div className="text-left">
           <p className="text-base lg:text-xl font-bold text-primary leading-tight">
@@ -89,9 +111,34 @@ export function ProductCard({ product, onSelect }: ProductCardProps) {
             {dual.ves}{suffix}
           </p>
         </div>
-        <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-          <Plus className="w-4 h-4 text-primary-foreground" />
-        </div>
+
+        {/* Counter or Add button */}
+        {cartQuantity > 0 && product.sale_type === 'unit' ? (
+          <div
+            className="flex items-center gap-1 bg-muted rounded-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={handleDecrement}
+              className="w-7 h-7 rounded-full bg-border flex items-center justify-center hover:bg-muted-foreground/20 transition-colors"
+            >
+              <Minus className="w-3.5 h-3.5 text-foreground" />
+            </button>
+            <span className="text-sm font-bold min-w-[1.25rem] text-center text-foreground">
+              {cartQuantity}
+            </span>
+            <button
+              onClick={handleIncrement}
+              className="w-7 h-7 rounded-full bg-primary flex items-center justify-center hover:bg-primary/90 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5 text-primary-foreground" />
+            </button>
+          </div>
+        ) : (
+          <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+            <Plus className="w-4 h-4 text-primary-foreground" />
+          </div>
+        )}
       </div>
     </button>
   );

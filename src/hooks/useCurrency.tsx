@@ -23,12 +23,13 @@ const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined
 
 async function fetchBCVRate(): Promise<number> {
   try {
-    const response = await fetch("https://api.exchangerate-api.com/v4/latest/USD");
-    if (!response.ok) throw new Error("Failed to fetch");
+    const response = await fetch("https://pydolarve.org/api/v2/dollar?monitor=bcv");
+    if (!response.ok) throw new Error("Failed to fetch BCV rate");
     const data = await response.json();
-    return data.rates?.VES || 36.5;
+    // pydolarve returns { price: number, ... }
+    return data?.price || 36.5;
   } catch (error) {
-    console.error("Error fetching exchange rate:", error);
+    console.error("Error fetching BCV exchange rate:", error);
     return 36.5;
   }
 }

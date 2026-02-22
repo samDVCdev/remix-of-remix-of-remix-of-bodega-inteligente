@@ -114,14 +114,14 @@ export function PaymentModal({
   };
   const formatBs = (usd: number) => (usd * exchangeRate).toFixed(1);
   if (!open) return null;
-  return <div className="fixed inset-0 z-50 flex items-center justify-center">
+  return <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60" onClick={handleClose} />
 
       {/* Modal */}
-      <div className="relative z-10 w-full max-w-3xl mx-4 grid grid-cols-1 md:grid-cols-[1fr,1fr] rounded-3xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative z-10 w-full sm:max-w-3xl sm:mx-4 max-h-[85vh] overflow-y-auto grid grid-cols-1 md:grid-cols-[1fr,1fr] rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
         {/* LEFT COLUMN - Payment Input */}
-        <div className="bg-card p-6 flex flex-col gap-5">
+        <div className="bg-card p-4 sm:p-6 flex flex-col gap-4 sm:gap-5">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-black italic text-foreground tracking-tight">PROCESAR COBRO</h2>
             <button onClick={handleClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
@@ -178,7 +178,7 @@ export function PaymentModal({
         </div>
 
         {/* RIGHT COLUMN - Summary */}
-        <div className="p-6 flex flex-col gap-4 border-l border-border bg-[sidebar-accent-foreground] bg-border">
+        <div className="p-4 sm:p-6 flex flex-col gap-3 sm:gap-4 border-l border-border bg-muted/30">
           {/* Total */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Factura</p>
@@ -227,7 +227,7 @@ export function PaymentModal({
                   Vuelto a entregar
                 </p>
                 <div className="text-right">
-                  <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">${change.toFixed(2)}</p>
+                  <p className="text-2xl font-black text-success">${change.toFixed(2)}</p>
                   <p className="text-xs text-muted-foreground">{formatBs(change)} Bs</p>
                 </div>
               </div> : <div className="flex items-center justify-between">
