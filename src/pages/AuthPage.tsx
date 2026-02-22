@@ -52,7 +52,10 @@ export default function AuthPage() {
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-email-by-identifier`,
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            },
             body: JSON.stringify({ identifier }),
           }
         );
