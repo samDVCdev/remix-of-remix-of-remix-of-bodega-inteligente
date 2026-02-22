@@ -230,6 +230,8 @@ export default function POSPage() {
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
               onSelectProduct={handleSelectProduct}
+              cartItems={items}
+              onRemoveItem={removeItem}
             />
           )}
         </div>

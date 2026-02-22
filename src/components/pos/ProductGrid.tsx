@@ -1,6 +1,6 @@
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Product } from "@/types/inventory";
+import { Product, CartItem } from "@/types/inventory";
 import { ProductCard } from "./ProductCard";
 
 interface ProductGridProps {
@@ -8,13 +8,17 @@ interface ProductGridProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onSelectProduct: (product: Product) => void;
+  cartItems?: CartItem[];
+  onRemoveItem?: (itemId: string) => void;
 }
 
 export function ProductGrid({ 
   products, 
   searchQuery, 
   onSearchChange, 
-  onSelectProduct 
+  onSelectProduct,
+  cartItems = [],
+  onRemoveItem
 }: ProductGridProps) {
   const normalize = (str: string) =>
     str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -50,6 +54,9 @@ export function ProductGrid({
                 key={product.id}
                 product={product}
                 onSelect={onSelectProduct}
+                cartItems={cartItems}
+                onIncrement={onSelectProduct}
+                onDecrement={onRemoveItem}
               />
             ))}
           </div>
