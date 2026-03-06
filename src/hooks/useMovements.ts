@@ -81,6 +81,33 @@ export function useCreateMovement() {
         .single();
       
       if (error) throw error;
+
+      // Manually update product stock since trigger may not exist
+      const stockDelta = data.movement_type === "entrada" ? data.quantity : -data.quantity;
+      const { error: stockError } = await supabase.rpc("update_stock_manually" as any, {
+        _product_id: data.product_id,
+        _delta: stockDelta,
+      });
+      
+      // Fallback: direct update if RPC doesn't exist
+      if (stockError) {
+        const { data: product } = await supabase
+          .from("products")
+          .select("stock, stock_base_units")
+          .eq("id", data.product_id)
+          .single();
+        
+        if (product) {
+          await supabase
+            .from("products")
+            .update({
+              stock: (product.stock || 0) + stockDelta,
+              stock_base_units: (product.stock_base_units || 0) + stockDelta,
+            })
+            .eq("id", data.product_id);
+        }
+      }
+
       return result;
     },
     onSuccess: (_, variables) => {
